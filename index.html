@@ -177,6 +177,12 @@ a:hover { text-decoration: underline; }
 #chat-list li.active {
   background: var(--button-color); border-color: transparent; color: var(--text-color); font-weight: 700;
 }
+/* Drop/paste affordance */
+#input-container.drop-hover {
+  outline: 2px dashed color-mix(in oklab, var(--accent-color) 60%, transparent);
+  outline-offset: -6px;
+}
+
 
 /* Context menu */
 #context-menu {
@@ -599,6 +605,8 @@ a:hover { text-decoration: underline; }
       currentModel = newModel;
       modelSelect.disabled = false;
     });
+
+    
     
     // Connect to server and populate model dropdown.
     async function connectToServer() {
@@ -814,5 +822,111 @@ a:hover { text-decoration: underline; }
     
     serverUrlInput.focus();
   </script>
+
+  <script>
+// --- Image helpers -------------------------------------------------
+async function handleImageFile(file) {
+  if (!file || !file.type.startsWith('image/')) return;
+
+  // Read file → DataURL
+  const dataURL = await new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = e => resolve(e.target.result);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+
+  // Stage it exactly like your upload flow
+  pendingImage = dataURL;
+  imagePreview.innerHTML = `<img src="${pendingImage}" style="max-width:100%; border-radius: var(--border-radius);" />`;
+  imagePreview.style.display = "block";
+  userInput.focus();
+}
+
+// Accept a DataTransfer (from drag & drop) or ClipboardData (from paste)
+async function handleTransferItems(dt) {
+  if (!dt) return;
+
+  // 1) Direct files (best case)
+  if (dt.files && dt.files.length) {
+    for (const file of dt.files) {
+      if (file.type && file.type.startsWith('image/')) {
+        await handleImageFile(file);
+        return; // take first image
+      }
+    }
+  }
+
+  // 2) Items (browser-specific clipboard/drag payloads)
+  if (dt.items && dt.items.length) {
+    for (const item of dt.items) {
+      // Pasted/dragged image blob (Chrome copies screenshots as image/png)
+      if (item.kind === 'file' && item.type.startsWith('image/')) {
+        const file = item.getAsFile();
+        if (file) {
+          await handleImageFile(file);
+          return;
+        }
+      }
+    }
+  }
+
+  // 3) As a fallback, if a URL to an image was dragged (not a file)
+  const url = dt.getData && (dt.getData('text/uri-list') || dt.getData('text/plain'));
+  if (url && /^https?:\/\//i.test(url) && /\.(png|jpe?g|gif|webp|bmp|svg)(\?|#|$)/i.test(url)) {
+    // Note: your chat API expects data URLs; we could try to fetch and convert,
+    // but without CORS that’s flaky. Still, we can at least show the preview and stage it.
+    pendingImage = url; // If your backend supports remote URLs, this will work.
+    imagePreview.innerHTML = `<img src="${pendingImage}" style="max-width:100%; border-radius: var(--border-radius);" />`;
+    imagePreview.style.display = "block";
+    userInput.focus();
+  }
+}
+
+// --- Paste: capture screenshots or copied images -------------------
+userInput.addEventListener('paste', async (e) => {
+  const dt = e.clipboardData;
+  if (!dt) return;
+
+  // If there is an image in the clipboard, use it and suppress default paste of weird binary text
+  const hasImage = Array.from(dt.items || []).some(i => i.kind === 'file' && i.type.startsWith('image/'));
+  if (hasImage) {
+    e.preventDefault();
+    await handleTransferItems(dt);
+  }
+});
+
+// Optional: also catch paste at document level (when focus isn’t in the input)
+document.addEventListener('paste', async (e) => {
+  if (document.activeElement !== userInput) {
+    const dt = e.clipboardData;
+    if (!dt) return;
+    const hasImage = Array.from(dt.items || []).some(i => i.kind === 'file' && i.type.startsWith('image/'));
+    if (hasImage) {
+      e.preventDefault();
+      await handleTransferItems(dt);
+    }
+  }
+});
+
+// --- Drag & drop: onto the input row -------------------------------
+const dropZone = document.getElementById('input-container');
+
+// Prevent the browser from opening the file
+['dragenter','dragover','dragleave','drop'].forEach(evt => {
+  dropZone.addEventListener(evt, e => { e.preventDefault(); e.stopPropagation(); });
+});
+
+// Visual cue
+dropZone.addEventListener('dragenter', () => dropZone.classList.add('drop-hover'));
+dropZone.addEventListener('dragover',  () => dropZone.classList.add('drop-hover'));
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drop-hover'));
+dropZone.addEventListener('drop', async (e) => {
+  dropZone.classList.remove('drop-hover');
+  const dt = e.dataTransfer;
+  await handleTransferItems(dt);
+});
+</script>
+
 </body>
 </html>
