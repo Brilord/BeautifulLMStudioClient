@@ -22,6 +22,7 @@
        - Maintainable structure through JS modules & components
        - Background image picker + dim/blur controls (localStorage)
        - Mobile-first layout, safe-area paddings, sticky input
+       - UPDATED: Mobile off-canvas sidebar drawer
        ========================================================= */
 
     /* THEME TOKENS */
@@ -51,7 +52,15 @@
     #app { display: flex; flex-direction: column; height: 100dvh; }
 
     /* Header */
-    #server-url-container { padding: 0.5rem env(safe-area-inset-right) 0.5rem env(safe-area-inset-left); background: color-mix(in oklab, var(--input-background) 92%, transparent); display: grid; gap: 0.5rem; align-items: center; grid-template-columns: 1fr auto auto auto; border-bottom: 1px solid var(--border-color); box-shadow: var(--shadow); }
+    #server-url-container {
+      padding: 0.5rem env(safe-area-inset-right) 0.5rem env(safe-area-inset-left);
+      background: color-mix(in oklab, var(--input-background) 92%, transparent);
+      display: grid; gap: 0.5rem; align-items: center;
+      grid-template-columns: auto 1fr auto auto auto; /* added mobile menu button column */
+      border-bottom: 1px solid var(--border-color); box-shadow: var(--shadow);
+    }
+    #mobile-menu-button { display: none; } /* hidden by default, shown on mobile */
+
     #server-url, #model-select { min-width: 0; padding: 0.65rem 0.75rem; font-size: 0.95rem; border: 1px solid var(--border-color); border-radius: var(--border-radius); background: var(--background-color); color: var(--text-color); }
     #model-select { width: min(42vw, 210px); }
     .icon-btn { display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 40px; border-radius: 10px; cursor: pointer; background: var(--button-color); color: var(--text-color); border: none; transition: transform var(--transition-speed), background var(--transition-speed); }
@@ -89,14 +98,52 @@
 
     /* Input row */
     #input-container { position: sticky; bottom: 0; padding: 0.5rem calc(0.5rem + env(safe-area-inset-right)) calc(0.5rem + env(safe-area-inset-bottom)) calc(0.5rem + env(safe-area-inset-left)); display: grid; grid-template-columns: auto 1fr auto; gap: 0.5rem; align-items: center; background: color-mix(in oklab, var(--input-background) 94%, transparent); border: 1px solid var(--border-color); border-radius: 12px; box-shadow: var(--shadow); }
-    #upload-button, #send-button, #bg-pick-button { width: 44px; height: 44px; border-radius: 12px; }
+    #upload-button, #send-button, #bg-pick-button, #mobile-menu-button { width: 44px; height: 44px; border-radius: 12px; }
     #user-input { min-height: 44px; padding: 0.7rem 0.8rem; border-radius: 12px; border: 1px solid var(--border-color); background: var(--background-color); color: var(--text-color); font-size: 1rem; }
     #user-input::placeholder { color: color-mix(in oklab, var(--muted-text) 70%, transparent); }
     #image-preview { display: none; max-width: 54px; }
 
-    /* Mobile tweaks */
-    @media (max-width: 768px) { #main-content { grid-template-columns: 1fr; } #chat-sidebar { display: none; } #server-url-container { grid-template-columns: 1fr auto auto auto; } #model-select { width: 36vw; } .message { max-width: 92%; } }
-    @media (max-width: 420px) { #server-url { font-size: 0.9rem; } #model-select { display: none; } #connect-button { height: 40px; padding: 0 0.75rem; } }
+    /* Mobile tweaks & Off-canvas sidebar */
+    @media (max-width: 768px) {
+      #main-content { grid-template-columns: 1fr; }
+
+      /* Show the hamburger in header */
+      #mobile-menu-button { display: inline-flex; }
+
+      /* Hide the in-sidebar collapse button (we close by tapping backdrop) */
+      #toggle-sidebar { display: none; }
+
+      /* Off-canvas drawer behavior */
+      #chat-sidebar {
+        position: fixed;
+        top: 0; left: 0; bottom: 0;
+        width: min(82vw, 360px);
+        max-width: 90vw;
+        background: color-mix(in oklab, var(--input-background) 96%, transparent);
+        border-right: 1px solid var(--border-color);
+        transform: translateX(-102%);
+        transition: transform var(--transition-speed) ease;
+        z-index: 60;
+      }
+      #chat-sidebar.open { transform: translateX(0); }
+
+      /* Backdrop under the drawer */
+      #sidebar-backdrop {
+        position: fixed; inset: 0;
+        background: rgba(0,0,0,0.35);
+        backdrop-filter: blur(2px);
+        opacity: 0; pointer-events: none;
+        transition: opacity var(--transition-speed) ease;
+        z-index: 55;
+      }
+      #sidebar-backdrop.show { opacity: 1; pointer-events: auto; }
+    }
+
+    @media (max-width: 420px) {
+      #server-url { font-size: 0.9rem; }
+      #model-select { display: none; }
+      #connect-button { height: 40px; padding: 0 0.75rem; }
+    }
 
     @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
     *::-webkit-scrollbar { width: 10px; height: 10px; }
@@ -112,6 +159,7 @@
   <div id="app">
     <!-- Header -->
     <div id="server-url-container">
+      <button id="mobile-menu-button" class="icon-btn" title="Chats"><i class="fas fa-bars"></i></button>
       <input type="text" id="server-url" placeholder="Enter LM Studio server address" />
       <select id="model-select" disabled><option value="">Select a model</option></select>
       <button id="bg-pick-button" class="icon-btn" title="Set background"><i class="fas fa-image"></i></button>
@@ -144,6 +192,9 @@
       </section>
     </div>
   </div>
+
+  <!-- Backdrop for mobile drawer -->
+  <div id="sidebar-backdrop"></div>
 
   <!-- Context menu & hidden controls -->
   <div id="context-menu">Delete Chat</div>
@@ -435,7 +486,30 @@
       function bind() {
         els.newChat.addEventListener('click', () => State.createChat());
         els.toggle.addEventListener('click', () => els.sidebar.classList.toggle('collapsed'));
-        document.addEventListener('click', () => { if (els.contextMenu.style.display === 'block') hideContextMenu(); });
+
+        // NEW: mobile off-canvas controls
+        const mobileBtn = document.getElementById('mobile-menu-button');
+        const backdrop  = document.getElementById('sidebar-backdrop');
+
+        const open = () => {
+          els.sidebar.classList.add('open');
+          backdrop?.classList.add('show');
+          document.body.style.overflow = 'hidden';
+        };
+        const close = () => {
+          els.sidebar.classList.remove('open');
+          backdrop?.classList.remove('show');
+          document.body.style.overflow = '';
+        };
+
+        mobileBtn?.addEventListener('click', open);
+        backdrop?.addEventListener('click', close);
+        // Escape key to close
+        document.addEventListener('keydown', (e) => { if (e.key === 'Escape') close(); });
+        // Auto-close if viewport grows beyond mobile
+        const mq = window.matchMedia('(min-width: 769px)');
+        if (mq.addEventListener) mq.addEventListener('change', () => { if (mq.matches) close(); });
+        else mq.onchange = () => { if (mq.matches) close(); };
 
         // react to state
         const refresh = () => render(State.snapshot.chats, State.snapshot.currentChatId);
@@ -531,7 +605,7 @@
         const text = els.input.value.trim();
         const img = State.snapshot.pendingImage;
         if (!text && !img) return null;
-        if (img) { State.addMessage({ content: `<img src="${img}" style="max-width:100%; border-radius: var(--border-radius);" />`, isUser: true }); State.addMessage({ content: text || "What's in this image?", isUser: true, isImage: true, imageData: img, text: text || '' }); State.setPendingImage(null); clearPendingPreview(); els.input.value = ''; return { kind: 'image', text: text || "What's in this image?", data: img }; }
+        if (img) { State.addMessage({ content: `<img src="${img}" style=\"max-width:100%; border-radius: var(--border-radius);\" />`, isUser: true }); State.addMessage({ content: text || "What's in this image?", isUser: true, isImage: true, imageData: img, text: text || '' }); State.setPendingImage(null); clearPendingPreview(); els.input.value = ''; return { kind: 'image', text: text || "What's in this image?", data: img }; }
         else { State.addMessage({ content: text, isUser: true }); els.input.value = ''; return { kind: 'text', text }; }
       }
 
