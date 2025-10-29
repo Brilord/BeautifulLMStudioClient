@@ -21,121 +21,276 @@
   <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js" async></script>
 
   <style>
-    /* =========================================================
-       LM Studio Chat — Modular Single File (with persistence)
-       ========================================================= */
+  /* =========================================================================
+     LM Studio Chat — Modular Single File (with persistence)
+     STYLE SHEET (DOCUMENTED) — NO BLUR EFFECTS
+     ========================================================================= */
 
-    /* THEME TOKENS */
-    :root, :root[data-theme="light"] {
-      --background-color: #f5f7fa; --text-color: #0f141b; --input-background: #e9edf3;
-      --user-message-color: #dbe3ed; --assistant-message-color: #eef2f7; --button-color: #2b85ff; --accent-color: #7cc0ff;
-      --border-radius: 12px; --transition-speed: 0.25s; --shadow: 0 2px 10px rgba(15, 20, 27, 0.12);
-      --border-color: rgba(15, 20, 27, 0.15); --muted-text: #4a5562; --surface-tint: rgba(43, 133, 255, 0.06);
-      --dim-amount: 0.25; --blur-amount: 6px;
+  /* THEME TOKENS */
+  :root, :root[data-theme="light"] {
+    --background-color: #f5f7fa;
+    --text-color: #0f141b;
+    --input-background: #e9edf3;
+
+    --user-message-color: #dbe3ed;
+    --assistant-message-color: #eef2f7;
+
+    --button-color: #2b85ff;
+    --accent-color: #7cc0ff;
+
+    --border-radius: 12px;
+    --transition-speed: 0.25s;
+    --shadow: 0 2px 10px rgba(15, 20, 27, 0.12);
+    --border-color: rgba(15, 20, 27, 0.15);
+    --muted-text: #4a5562;
+    --surface-tint: rgba(43, 133, 255, 0.06);
+
+    --dim-amount: 0.25;
+  }
+  :root[data-theme="dark"] {
+    --background-color: #0e1116;
+    --text-color: #e6e8eb;
+    --input-background: #161b22;
+
+    --user-message-color: #1f242d;
+    --assistant-message-color: #151a21;
+
+    --button-color: #2b85ff;
+    --accent-color: #7cc0ff;
+
+    --border-radius: 12px;
+    --transition-speed: 0.25s;
+    --shadow: 0 8px 24px rgba(0,0,0,0.35);
+    --border-color: rgba(255,255,255,0.08);
+    --muted-text: #b6c0cc;
+    --surface-tint: rgba(124, 192, 255, 0.08);
+
+    --dim-amount: 0.38;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme]) { color-scheme: dark; }
+  }
+
+  /* GLOBAL */
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    background: var(--background-color);
+    color: var(--text-color);
+    font-family: 'Inter', system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+    line-height: 1.45;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  a { color: var(--accent-color); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+
+  /* BACKGROUND LAYERS */
+  #bg-layer {
+    position: fixed; inset: 0; z-index: -2;
+    background-position: center;
+    background-repeat: no-repeat;
+    background-size: cover;
+    transition: opacity var(--transition-speed) ease;
+  }
+  #bg-dim {
+    position: fixed; inset: 0; z-index: -1;
+    background: rgba(0, 0, 0, calc(var(--dim-amount)));
+    pointer-events: none;
+  }
+
+  /* APP LAYOUT */
+  #app { display: flex; flex-direction: column; height: 100dvh; }
+
+  /* HEADER */
+  #server-url-container {
+    padding: 0.5rem env(safe-area-inset-right) 0.5rem env(safe-area-inset-left);
+    background: color-mix(in oklab, var(--input-background) 92%, transparent);
+    display: grid; gap: 0.5rem; align-items: center;
+    grid-template-columns: auto 1fr auto auto auto auto auto auto auto;
+    border-bottom: 1px solid var(--border-color);
+    box-shadow: var(--shadow);
+  }
+  #mobile-menu-button { display: none; }
+
+  #server-url, #model-select {
+    min-width: 0;
+    padding: 0.65rem 0.75rem;
+    font-size: 0.95rem;
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    background: var(--background-color);
+    color: var(--text-color);
+  }
+  #model-select { width: min(42vw, 210px); }
+
+  .icon-btn {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 40px; height: 40px; border-radius: 10px; cursor: pointer;
+    background: var(--button-color); color: var(--text-color); border: none;
+    transition: transform var(--transition-speed), background var(--transition-speed);
+  }
+  .icon-btn:hover { background: var(--accent-color); transform: translateY(-1px); }
+  .icon-btn:active { transform: translateY(0); }
+
+  #connect-button {
+    padding: 0 0.9rem; min-width: 44px; height: 40px;
+    border-radius: 10px; border: none; background: var(--button-color);
+    color: var(--text-color); font-weight: 600; cursor: pointer;
+  }
+
+  #connection-status {
+    text-align: center; padding: 0.4rem 0.6rem; font-size: 0.85rem;
+    background: color-mix(in oklab, var(--input-background) 80%, transparent);
+    color: var(--muted-text);
+    border-bottom: 1px solid var(--border-color);
+  }
+
+  /* MAIN GRID */
+  #main-content { display: grid; grid-template-columns: 280px 1fr; min-height: 0; flex: 1; }
+
+  /* SIDEBAR */
+  #chat-sidebar {
+    background: color-mix(in oklab, var(--input-background) 96%, transparent);
+    border-right: 1px solid var(--border-color);
+    position: relative; overflow: hidden;
+  }
+  #toggle-sidebar { position: absolute; top: 10px; right: 10px; z-index: 2; }
+
+  .sidebar-content { padding: 0.85rem; height: 100%; display: flex; flex-direction: column; gap: 0.7rem; }
+  #chat-sidebar-header { display: flex; justify-content: space-between; align-items: center; font-weight: 700; }
+  #new-chat-button {
+    width: 100%; padding: 0.6rem 0.75rem; border: none; border-radius: 10px;
+    font-weight: 600; background: var(--button-color); color: var(--text-color); cursor: pointer;
+  }
+  #chat-list { list-style: none; margin: 0; padding: 0; overflow-y: auto; }
+  #chat-list li {
+    padding: 0.6rem 0.65rem; border-radius: 10px; margin-bottom: 0.45rem; cursor: pointer;
+    background: var(--background-color); border: 1px solid var(--border-color);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 0.92rem;
+  }
+  #chat-list li:hover { background: var(--input-background); }
+  #chat-list li.active {
+    background: var(--button-color); color: var(--text-color); border-color: transparent; font-weight: 700;
+  }
+
+  /* CHAT AREA */
+  #chat-section { display: flex; flex-direction: column; min-height: 0; padding: 0.75rem; gap: 0.75rem; }
+  #chat-container {
+    flex: 1; overflow-y: auto; padding: 0.75rem; display: flex; flex-direction: column; gap: 0.75rem;
+    background: color-mix(in oklab, var(--surface-tint) 70%, transparent);
+    border: 1px solid var(--border-color); border-radius: var(--border-radius);
+  }
+  .message {
+    max-width: 86%; padding: 0.85rem 1rem; border-radius: var(--border-radius);
+    word-wrap: break-word;
+    font-size: clamp(0.95rem, 0.95rem + 0.1vw, 1.02rem); line-height: 1.6;
+
+    background: color-mix(in oklab, var(--assistant-message-color) 80%, transparent);
+    border: 1px solid color-mix(in oklab, var(--text-color) 18%, transparent);
+    box-shadow: 0 6px 20px rgba(0,0,0,0.28), inset 0 1px 0 rgba(255,255,255,0.05);
+
+    position: relative; animation: fadeIn 0.25s ease both;
+  }
+  .user-message {
+    align-self: flex-end;
+    background: color-mix(in oklab, var(--user-message-color) 88%, transparent);
+    border: 1px solid color-mix(in oklab, var(--text-color) 24%, transparent);
+  }
+  .assistant-message { align-self: flex-start; }
+
+  .message-header { font-weight: 700; margin-bottom: 0.25rem; font-size: 0.85rem; }
+  .message-model, .message-metrics { font-size: 0.76rem; color: var(--muted-text); }
+  .message-content { margin-top: 0.2rem; text-shadow: 0 0 1px rgba(0,0,0,0.25); }
+
+  .message-content pre {
+    background: color-mix(in oklab, #0b0f14 85%, var(--background-color));
+    color: #d7dde4; padding: 0.85rem; overflow-x: auto; border-radius: 10px; border: 1px solid var(--border-color);
+  }
+  .message-content code {
+    background: rgba(15,20,27,0.14); padding: 0.15em 0.35em; border-radius: 4px;
+  }
+  .copy-btn {
+    position: absolute; top: 6px; right: 6px; border: none; border-radius: 8px; cursor: pointer;
+    font-size: 0.74rem; padding: 3px 9px; opacity: 0.40; background: var(--accent-color); color: var(--text-color);
+  }
+
+  /* INPUT BAR */
+  #input-container {
+    position: sticky; bottom: 0; padding: 0.5rem calc(0.5rem + env(safe-area-inset-right)) calc(0.5rem + env(safe-area-inset-bottom)) calc(0.5rem + env(safe-area-inset-left));
+    display: grid; grid-template-columns: auto 1fr auto; gap: 0.5rem; align-items: center;
+    background: color-mix(in oklab, var(--input-background) 94%, transparent);
+    border: 1px solid var(--border-color); border-radius: 12px; box-shadow: var(--shadow);
+  }
+  #upload-button, #send-button, #bg-pick-button, #mobile-menu-button, #export-chats, #import-chats, #clear-chats {
+    width: 44px; height: 44px; border-radius: 12px;
+  }
+  #user-input {
+    min-height: 44px; padding: 0.7rem 0.8rem; border-radius: 12px;
+    border: 1px solid var(--border-color);
+    background: var(--background-color); color: var(--text-color); font-size: 1rem;
+  }
+  #user-input::placeholder { color: color-mix(in oklab, var(--muted-text) 70%, transparent); }
+  #image-preview { display: none; max-width: 54px; }
+
+  /* MOBILE */
+  @media (max-width: 768px) {
+    #main-content { grid-template-columns: 1fr; }
+    #mobile-menu-button { display: inline-flex; }
+    #toggle-sidebar { display: none; }
+
+    #chat-sidebar {
+      position: fixed; top: 0; left: 0; bottom: 0; width: min(82vw, 360px); max-width: 90vw;
+      background: color-mix(in oklab, var(--input-background) 30%, transparent);
+      border-right: 1px solid var(--border-color);
+      transform: translateX(-102%); transition: transform var(--transition-speed) ease; z-index: 60;
     }
-    :root[data-theme="dark"] {
-      --background-color: #0e1116; --text-color: #e6e8eb; --input-background: #161b22; --user-message-color: #1f242d; --assistant-message-color: #151a21;
-      --button-color: #2b85ff; --accent-color: #7cc0ff; --border-radius: 12px; --transition-speed: 0.25s; --shadow: 0 8px 24px rgba(0,0,0,0.35);
-      --border-color: rgba(255,255,255,0.08); --muted-text: #b6c0cc; --surface-tint: rgba(124, 192, 255, 0.08); --dim-amount: 0.38; --blur-amount: 8px;
+    #chat-sidebar.open { transform: translateX(0); }
+
+    #sidebar-backdrop {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.35);
+      opacity: 0; pointer-events: none; transition: opacity var(--transition-speed) ease; z-index: 55;
     }
-    @media (prefers-color-scheme: dark) { :root:not([data-theme]) { color-scheme: dark; } }
+    #sidebar-backdrop.show { opacity: 1; pointer-events: auto; }
 
-    * { box-sizing: border-box; } html, body { height: 100%; margin: 0; }
-    body { background: var(--background-color); color: var(--text-color); font-family: 'Inter', system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; line-height: 1.45; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
-    a { color: var(--accent-color); text-decoration: none; } a:hover { text-decoration: underline; }
+    .message { background: color-mix(in oklab, var(--assistant-message-color) 28%, transparent); }
+    .user-message { background: color-mix(in oklab, var(--user-message-color) 33%, transparent); }
+  }
 
-    /* BACKGROUND LAYER (custom image) */
-    #bg-layer { position: fixed; inset: 0; z-index: -2; background-position: center; background-repeat: no-repeat; background-size: cover; transition: opacity var(--transition-speed) ease; }
-    #bg-dim { position: fixed; inset: 0; z-index: -1; backdrop-filter: blur(var(--blur-amount)); background: color-mix(in oklab, #000 100%, transparent calc(100% - calc(var(--dim-amount) * 100%))); pointer-events: none; }
+  /* TINY DEVICES */
+  @media (max-width: 420px) {
+    #server-url { font-size: 0.9rem; }
+    #model-select { display: none; }
+    #connect-button { height: 40px; padding: 0 0.75rem; }
+  }
 
-    /* APP LAYOUT */
-    #app { display: flex; flex-direction: column; height: 100dvh; }
+  /* MICRO INTERACTIONS */
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
 
-    /* Header */
-    #server-url-container {
-      padding: 0.5rem env(safe-area-inset-right) 0.5rem env(safe-area-inset-left);
-      background: color-mix(in oklab, var(--input-background) 92%, transparent);
-      display: grid; gap: 0.5rem; align-items: center;
-      grid-template-columns: auto 1fr auto auto auto auto auto auto auto; /* room for more buttons */
-      border-bottom: 1px solid var(--border-color); box-shadow: var(--shadow);
-    }
-    #mobile-menu-button { display: none; } /* shown on mobile via media query */
+  *::-webkit-scrollbar { width: 10px; height: 10px; }
+  *::-webkit-scrollbar-thumb {
+    background: color-mix(in oklab, var(--accent-color) 35%, #0000);
+    border-radius: 10px; border: 2px solid transparent; background-clip: padding-box;
+  }
+  *::-webkit-scrollbar-track { background: transparent; }
 
-    #server-url, #model-select { min-width: 0; padding: 0.65rem 0.75rem; font-size: 0.95rem; border: 1px solid var(--border-color); border-radius: var(--border-radius); background: var(--background-color); color: var(--text-color); }
-    #model-select { width: min(42vw, 210px); }
-    .icon-btn { display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 40px; border-radius: 10px; cursor: pointer; background: var(--button-color); color: var(--text-color); border: none; transition: transform var(--transition-speed), background var(--transition-speed); }
-    .icon-btn:hover { background: var(--accent-color); transform: translateY(-1px); }
-    .icon-btn:active { transform: translateY(0); }
-    #connect-button { padding: 0 0.9rem; min-width: 44px; height: 40px; border-radius: 10px; border: none; background: var(--button-color); color: var(--text-color); font-weight: 600; cursor: pointer; }
-    #connection-status { text-align: center; padding: 0.4rem 0.6rem; font-size: 0.85rem; background: color-mix(in oklab, var(--input-background) 80%, transparent); color: var(--muted-text); border-bottom: 1px solid var(--border-color); }
-
-    /* MAIN */
-    #main-content { display: grid; grid-template-columns: 280px 1fr; min-height: 0; flex: 1; }
-
-    /* Sidebar */
-    #chat-sidebar { background: color-mix(in oklab, var(--input-background) 96%, transparent); border-right: 1px solid var(--border-color); position: relative; overflow: hidden; }
-    #toggle-sidebar { position: absolute; top: 10px; right: 10px; z-index: 2; }
-    .sidebar-content { padding: 0.85rem; height: 100%; display: flex; flex-direction: column; gap: 0.7rem; }
-    #chat-sidebar-header { display: flex; justify-content: space-between; align-items: center; font-weight: 700; }
-    #new-chat-button { width: 100%; padding: 0.6rem 0.75rem; border: none; border-radius: 10px; font-weight: 600; background: var(--button-color); color: var(--text-color); cursor: pointer; }
-    #chat-list { list-style: none; margin: 0; padding: 0; overflow-y: auto; }
-    #chat-list li { padding: 0.6rem 0.65rem; border-radius: 10px; margin-bottom: 0.45rem; cursor: pointer; background: var(--background-color); border: 1px solid var(--border-color); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 0.92rem; }
-    #chat-list li:hover { background: var(--input-background); }
-    #chat-list li.active { background: var(--button-color); color: var(--text-color); border-color: transparent; font-weight: 700; }
-
-    /* Chat area */
-    #chat-section { display: flex; flex-direction: column; min-height: 0; padding: 0.75rem; gap: 0.75rem; }
-    #chat-container { flex: 1; overflow-y: auto; padding: 0.75rem; display: flex; flex-direction: column; gap: 0.75rem; background: color-mix(in oklab, var(--surface-tint) 70%, transparent); border: 1px solid var(--border-color); border-radius: var(--border-radius); }
-
-    /* Contrast-safe glass bubbles */
-    .message { max-width: 86%; padding: 0.85rem 1rem; border-radius: var(--border-radius); word-wrap: break-word; font-size: clamp(0.95rem, 0.95rem + 0.1vw, 1.02rem); line-height: 1.6; background: color-mix(in oklab, var(--assistant-message-color) 80%, transparent); border: 1px solid color-mix(in oklab, var(--text-color) 18%, transparent); box-shadow: 0 6px 20px rgba(0,0,0,0.28), inset 0 1px 0 rgba(255,255,255,0.05); position: relative; animation: fadeIn 0.25s ease both; backdrop-filter: saturate(110%) blur(8px); -webkit-backdrop-filter: saturate(110%) blur(8px); }
-    .user-message { align-self: flex-end; background: color-mix(in oklab, var(--user-message-color) 88%, transparent); border: 1px solid color-mix(in oklab, var(--text-color) 24%, transparent); }
-    .assistant-message { align-self: flex-start; }
-    .message-header { font-weight: 700; margin-bottom: 0.25rem; font-size: 0.85rem; }
-    .message-model, .message-metrics { font-size: 0.76rem; color: var(--muted-text); }
-    .message-content { margin-top: 0.2rem; text-shadow: 0 0 1px rgba(0,0,0,0.25); }
-    .message-content pre { background: color-mix(in oklab, #0b0f14 85%, var(--background-color)); color: #d7dde4; padding: 0.85rem; overflow-x: auto; border-radius: 10px; border: 1px solid var(--border-color); }
-    .message-content code { background: rgba(15,20,27,0.14); padding: 0.15em 0.35em; border-radius: 4px; }
-    .copy-btn { position: absolute; top: 6px; right: 6px; border: none; border-radius: 8px; cursor: pointer; font-size: 0.74rem; padding: 3px 9px; opacity: 0.95; background: var(--accent-color); color: var(--text-color); }
-
-    /* Input row */
-    #input-container { position: sticky; bottom: 0; padding: 0.5rem calc(0.5rem + env(safe-area-inset-right)) calc(0.5rem + env(safe-area-inset-bottom)) calc(0.5rem + env(safe-area-inset-left)); display: grid; grid-template-columns: auto 1fr auto; gap: 0.5rem; align-items: center; background: color-mix(in oklab, var(--input-background) 94%, transparent); border: 1px solid var(--border-color); border-radius: 12px; box-shadow: var(--shadow); }
-    #upload-button, #send-button, #bg-pick-button, #mobile-menu-button, #export-chats, #import-chats, #clear-chats { width: 44px; height: 44px; border-radius: 12px; }
-    #user-input { min-height: 44px; padding: 0.7rem 0.8rem; border-radius: 12px; border: 1px solid var(--border-color); background: var(--background-color); color: var(--text-color); font-size: 1rem; }
-    #user-input::placeholder { color: color-mix(in oklab, var(--muted-text) 70%, transparent); }
-    #image-preview { display: none; max-width: 54px; }
-
-    /* Mobile tweaks & Off-canvas sidebar */
-    @media (max-width: 768px) {
-      #main-content { grid-template-columns: 1fr; }
-      #mobile-menu-button { display: inline-flex; }
-      #toggle-sidebar { display: none; }
-      #chat-sidebar {
-        position: fixed; top: 0; left: 0; bottom: 0; width: min(82vw, 360px); max-width: 90vw;
-        background: color-mix(in oklab, var(--input-background) 96%, transparent);
-        border-right: 1px solid var(--border-color);
-        transform: translateX(-102%); transition: transform var(--transition-speed) ease; z-index: 60;
-      }
-      #chat-sidebar.open { transform: translateX(0); }
-      #sidebar-backdrop {
-        position: fixed; inset: 0; background: rgba(0,0,0,0.35); backdrop-filter: blur(2px);
-        opacity: 0; pointer-events: none; transition: opacity var(--transition-speed) ease; z-index: 55;
-      }
-      #sidebar-backdrop.show { opacity: 1; pointer-events: auto; }
-      .message { background: color-mix(in oklab, var(--assistant-message-color) 88%, transparent); }
-      .user-message { background: color-mix(in oklab, var(--user-message-color) 92%, transparent); }
-    }
-
-    @media (max-width: 420px) {
-      #server-url { font-size: 0.9rem; }
-      #model-select { display: none; }
-      #connect-button { height: 40px; padding: 0 0.75rem; }
-    }
-
-    @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
-    *::-webkit-scrollbar { width: 10px; height: 10px; }
-    *::-webkit-scrollbar-thumb { background: color-mix(in oklab, var(--accent-color) 35%, #0000); border-radius: 10px; border: 2px solid transparent; background-clip: padding-box; }
-    *::-webkit-scrollbar-track { background: transparent; }
+  /* CONTEXT MENU */
+  #context-menu{
+    position: absolute;
+    display: none;
+    z-index: 3000;
+    background: var(--background-color);
+    color: var(--text-color);
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    padding: 0.5rem 0.75rem;
+    box-shadow: var(--shadow);
+    cursor: pointer;
+    user-select: none;
+    white-space: nowrap;
+  }
+  #context-menu:hover{ background: var(--input-background); }
   </style>
 </head>
 <body>
@@ -184,7 +339,7 @@
           <input type="file" id="image-upload" accept="image/*" style="display:none;" />
           <div id="image-preview"></div>
           <input type="text" id="user-input" placeholder="Type a message..." disabled />
-          <button id="send-button" class="icon-btn" title="Send"><i class="fas fa-paper-plane"></i></button>
+          <button id="send-button" class="icon-btn" title="Send" disabled><i class="fas fa-paper-plane"></i></button>
         </div>
       </section>
     </div>
@@ -202,7 +357,7 @@
       ARCHITECTURE OVERVIEW
       ├── Core: Events, Utils, Storage
       ├── State: reactive app state (single source of truth)
-      ├── Services: BackgroundService, LMStudioAPI
+      ├── Services: BackgroundService, LMStudioAPI, Health
       ├── UI Components: Header, Sidebar, ChatView, InputBar
       └── AppController: wires everything together
     */
@@ -304,18 +459,15 @@
         currentChatId: Storage.loadCurrentChatId() || null,
       };
 
-      // persist with image-sanitization for localStorage (avoid base64 bloat)
       const persist = () => {
         const sanitized = state.chats.map(chat => ({
           id: chat.id,
           name: chat.name,
           messages: (chat.messages || []).map(m => {
             const copy = { ...m };
-            // Strip base64 <img> tags from content for storage
             if (typeof copy.content === 'string') {
               copy.content = copy.content.replace(/<img[^>]+src="data:image[^"]+"[^>]*>/gi, '[Image omitted]');
             }
-            // Drop raw image data from persistent layer
             if (copy.isImage) copy.imageData = null;
             return copy;
           })
@@ -455,6 +607,21 @@
       return { listModels, eject, streamChat };
     })();
 
+    // ================= Services: Health (optional ping) =================
+    const Health = (() => {
+      async function ping() {
+        const { serverUrl } = State.snapshot;
+        if (!serverUrl) return false;
+        try {
+          const r = await fetch(`${serverUrl}/v1/models`, { method: 'GET' });
+          return r.ok;
+        } catch {
+          return false;
+        }
+      }
+      return { ping };
+    })();
+
     // ================= UI: Header =================
     const Header = (() => {
       const els = {
@@ -489,6 +656,8 @@
           els.modelSelect.appendChild(opt);
         }
         els.modelSelect.disabled = list.length === 0;
+        // Auto-select first model if present
+        if (list.length > 0) els.modelSelect.selectedIndex = 0;
         State.setModel(els.modelSelect.value || '');
       }
 
@@ -515,7 +684,8 @@
         els.connectButton.addEventListener('click', async () => {
           const { isConnected } = State.snapshot;
           if (isConnected) {
-            State.setConnection({ connected: false }); setStatus('Disconnected', false);
+            State.setConnection({ connected: false });
+            setStatus('Disconnected', false);
             Events.emit('network:disconnected');
             return;
           }
@@ -526,7 +696,8 @@
             const data = await LMStudioAPI.listModels(serverUrl);
             State.setServerUrl(serverUrl);
             populateModels(data);
-            State.setConnection({ connected: true }); setStatus('Connected', true);
+            State.setConnection({ connected: true });
+            setStatus('Connected', true);
             Events.emit('network:connected', { serverUrl });
           } catch (e) {
             console.error(e); setStatus('Failed to connect', false);
@@ -604,13 +775,42 @@
       }
 
       function showContextMenu(x, y, chatId) {
-        const m = els.contextMenu; m.style.left = x + 'px'; m.style.top = y + 'px'; m.style.display = 'block';
-        m.onclick = () => { State.deleteChat(chatId); hideContextMenu(); };
+        const m = els.contextMenu;
+
+        // Prepare & measure
+        m.style.display = 'block';
+        m.style.visibility = 'hidden';
+        const w = m.offsetWidth || 160;
+        const h = m.offsetHeight || 40;
+
+        // Clamp within viewport
+        const margin = 8;
+        const nx = Math.min(x, window.innerWidth  - w - margin);
+        const ny = Math.min(y, window.innerHeight - h - margin);
+
+        // Place and show
+        m.style.left = nx + 'px';
+        m.style.top  = ny + 'px';
+        m.style.visibility = 'visible';
+
+        m.onclick = async (e) => {
+          e.stopPropagation();
+          State.deleteChat(chatId);
+          // Optional server health ping after delete
+          const ok = await Health.ping();
+          if (!ok) Header.setStatus('Connected (server did not respond to ping)', false);
+          hideContextMenu();
+        };
       }
-      function hideContextMenu() { els.contextMenu.style.display = 'none'; }
+      function hideContextMenu() { els.contextMenu.style.display = 'none'; els.contextMenu.style.visibility = 'hidden'; }
 
       function bind() {
-        els.newChat.addEventListener('click', () => State.createChat());
+        els.newChat.addEventListener('click', async () => {
+          State.createChat();
+          // Optional server health ping after create
+          const ok = await Health.ping();
+          if (!ok) Header.setStatus('Connected (server did not respond to ping)', false);
+        });
         els.toggle.addEventListener('click', () => els.sidebar.classList.toggle('collapsed'));
 
         // Mobile off-canvas controls
@@ -641,6 +841,8 @@
         refresh();
 
         document.addEventListener('click', () => hideContextMenu());
+        window.addEventListener('scroll', hideContextMenu, { passive: true });
+        window.addEventListener('resize', hideContextMenu);
       }
       return { bind };
     })();
@@ -648,7 +850,7 @@
     // ================= UI: ChatView (append-only streaming safe) =================
     const ChatView = (() => {
       const container = document.getElementById('chat-container');
-      let liveStreamEl = null; // ephemeral streaming bubble
+      let liveStreamEl = null;
 
       function messageHtml(msg, model) {
         const { isUser, content } = msg;
@@ -721,7 +923,6 @@
 
       function bind() {
         Events.on('state:currentChat', renderChat);
-        // Append-only on messageAdded so we don't blow away the ephemeral stream bubble
         Events.on('chat:messageAdded', ({ chatId, message }) => {
           if (State.snapshot.currentChatId !== chatId) return;
           appendMessage(message);
@@ -812,12 +1013,10 @@
         if (!text && !img) return null;
 
         if (img) {
-          // Show the full image in-session (not saved to localStorage as base64).
           State.addMessage({
             content: `<img src="${img}" style="max-width:100%; border-radius: var(--border-radius);" />`,
             isUser: true
           });
-          // Also add a semantic "image analysis" user turn for API context
           State.addMessage({ content: text || "What's in this image?", isUser: true, isImage: true, imageData: img, text: text || '' });
           State.setPendingImage(null); clearPendingPreview(); els.input.value = '';
           return { kind: 'image', text: text || "What's in this image?", data: img };
@@ -866,6 +1065,22 @@
       }
 
       async function onSend() {
+        // Guard: must be connected + have URL + have model
+        const { serverUrl, currentModel, isConnected } = State.snapshot;
+        if (!isConnected) {
+          Header.setStatus('Disconnected', false);
+          alert('Connect to the LM Studio server first.');
+          return;
+        }
+        if (!serverUrl) {
+          alert('Missing server URL.');
+          return;
+        }
+        if (!currentModel) {
+          alert('Pick a model before sending.');
+          return;
+        }
+
         const req = InputBar.getMessageAndMaybeImage();
         if (!req) return;
 
@@ -873,7 +1088,6 @@
         const stream = ChatView.addStreamingAssistantMessage();
         let acc = '';
 
-        const { serverUrl, currentModel } = State.snapshot;
         const messages = await buildConversationHistory();
 
         try {
@@ -887,8 +1101,11 @@
         } catch (e) {
           console.error(e);
           stream.discard();
-          State.addMessage({ content: 'Error: Unable to get a response from the server. Please try again.', isUser: false });
-          Events.emit('state:connection', { connected: false, model: State.snapshot.currentModel });
+          State.addMessage({
+            content: 'Send failed (connection kept). Check server URL, CORS, model, and try again.',
+            isUser: false
+          });
+          // NOTE: do NOT auto-toggle to Disconnected here
         } finally {
           InputBar.focus();
         }
@@ -908,9 +1125,6 @@
 
         // Bind send
         bindSend();
-
-        // Optional safety: persist on unload (we already persist on each change)
-        window.addEventListener('beforeunload', () => { /* no-op; persist already runs */ });
       }
 
       return { init };
