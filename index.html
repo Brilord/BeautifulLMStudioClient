@@ -23,7 +23,7 @@
   <style>
   /* =========================================================================
      LM Studio Chat — Modular Single File (with persistence)
-     STYLE SHEET (DOCUMENTED) — NO BLUR EFFECTS
+     STYLE SHEET (DOCUMENTED) — MOBILE-OPTIMIZED + STREAMING FIXES
      ========================================================================= */
 
   /* THEME TOKENS */
@@ -81,6 +81,7 @@
     line-height: 1.45;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    text-size-adjust: 100%;
   }
   a { color: var(--accent-color); text-decoration: none; }
   a:hover { text-decoration: underline; }
@@ -105,11 +106,12 @@
   /* HEADER */
   #server-url-container {
     padding: 0.5rem env(safe-area-inset-right) 0.5rem env(safe-area-inset-left);
-    background: color-mix(in oklab, var(--input-background) 92%, transparent);
+    background: color-mix(in oklab, var(--input-background) 40%, transparent);
     display: grid; gap: 0.5rem; align-items: center;
     grid-template-columns: auto 1fr auto auto auto auto auto auto auto;
     border-bottom: 1px solid var(--border-color);
     box-shadow: var(--shadow);
+    position: sticky; top: 0; z-index: 10;
   }
   #mobile-menu-button { display: none; }
 
@@ -129,6 +131,7 @@
     width: 40px; height: 40px; border-radius: 10px; cursor: pointer;
     background: var(--button-color); color: var(--text-color); border: none;
     transition: transform var(--transition-speed), background var(--transition-speed);
+    touch-action: manipulation;
   }
   .icon-btn:hover { background: var(--accent-color); transform: translateY(-1px); }
   .icon-btn:active { transform: translateY(0); }
@@ -145,6 +148,25 @@
     color: var(--muted-text);
     border-bottom: 1px solid var(--border-color);
   }
+
+  /* !!! NEW: center banner */
+  #header-banner{
+    grid-column: 1 / -1;
+    text-align: center;
+    font-weight: 700;
+    letter-spacing: .2px;
+    opacity: .9;
+    pointer-events: none;
+    user-select: none;
+    white-space: nowrap;
+  }
+  #header-banner.typing::after{
+    content: '▌';
+    display: inline-block;
+    margin-left: 2px;
+    animation: blink 1s steps(2, start) infinite;
+  }
+  @keyframes blink { 50% { opacity: 0; } }
 
   /* MAIN GRID */
   #main-content { display: grid; grid-template-columns: 280px 1fr; min-height: 0; flex: 1; }
@@ -228,7 +250,7 @@
   #user-input {
     min-height: 44px; padding: 0.7rem 0.8rem; border-radius: 12px;
     border: 1px solid var(--border-color);
-    background: var(--background-color); color: var(--text-color); font-size: 1rem;
+    background: var(--background-color); color: var(--text-color); font-size: 16px; /* Prevent iOS zoom */
   }
   #user-input::placeholder { color: color-mix(in oklab, var(--muted-text) 70%, transparent); }
   #image-preview { display: none; max-width: 54px; }
@@ -239,11 +261,17 @@
     #mobile-menu-button { display: inline-flex; }
     #toggle-sidebar { display: none; }
 
+    #server-url-container {
+      grid-template-columns: auto 1fr auto auto; /* menu, url, bg, connect */
+    }
+    #model-select, #export-chats, #import-chats, #clear-chats, #header-banner { display: none; }
+
     #chat-sidebar {
-      position: fixed; top: 0; left: 0; bottom: 0; width: min(82vw, 360px); max-width: 90vw;
+      position: fixed; top: 0; left: 0; bottom: 0; width: min(88vw, 360px); max-width: 90vw;
       background: color-mix(in oklab, var(--input-background) 30%, transparent);
       border-right: 1px solid var(--border-color);
       transform: translateX(-102%); transition: transform var(--transition-speed) ease; z-index: 60;
+      backdrop-filter: none; /* ensure no blur */
     }
     #chat-sidebar.open { transform: translateX(0); }
 
@@ -254,14 +282,15 @@
     }
     #sidebar-backdrop.show { opacity: 1; pointer-events: auto; }
 
-    .message { background: color-mix(in oklab, var(--assistant-message-color) 28%, transparent); }
+    .message { background: color-mix(in oklab, var(--assistant-message-color) 28%, transparent); max-width: 92%; }
     .user-message { background: color-mix(in oklab, var(--user-message-color) 33%, transparent); }
+
+    #chat-container { padding-bottom: 0.25rem; }
   }
 
   /* TINY DEVICES */
   @media (max-width: 420px) {
     #server-url { font-size: 0.9rem; }
-    #model-select { display: none; }
     #connect-button { height: 40px; padding: 0 0.75rem; }
   }
 
@@ -291,6 +320,34 @@
     white-space: nowrap;
   }
   #context-menu:hover{ background: var(--input-background); }
+
+  /* LOADING DOTS */
+  .loading-dots { font-variant-numeric: tabular-nums; }
+  .loading-dots::after {
+    content: '';
+    animation: dots 1.2s steps(4, end) infinite;
+  }
+  @keyframes dots { 0% { content: ' .'; } 25% { content: ' ..'; } 50% { content: ' ...'; } 75%, 100% { content: ' ....'; } }
+
+  /* === Debug Panel (overlay) === */
+  #debug-panel {
+    position: fixed; inset: auto 12px 12px auto; width: min(520px, 92vw); max-height: 60vh;
+    background: color-mix(in oklab, var(--input-background) 92%, transparent);
+    color: var(--text-color); border: 1px solid var(--border-color);
+    border-radius: 12px; box-shadow: var(--shadow); z-index: 9999; display: none; overflow: hidden;
+  }
+  #debug-panel.open { display: grid; grid-template-rows: auto auto 1fr; }
+  #debug-panel-header { display:flex; align-items:center; gap:.5rem; padding:.5rem .75rem; font-weight:700; }
+  #debug-panel-controls { display:flex; gap:.5rem; padding: .25rem .75rem .5rem; }
+  #debug-panel-controls button {
+    border: 1px solid var(--border-color); background: var(--background-color);
+    border-radius: 8px; padding:.3rem .6rem; cursor:pointer;
+  }
+  #debug-log {
+    font: 12px/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    background: color-mix(in oklab, #0b0f14 85%, var(--background-color));
+    color: #d7dde4; padding:.5rem; overflow:auto; white-space:pre-wrap;
+  }
   </style>
 </head>
 <body>
@@ -305,6 +362,9 @@
       <input type="text" id="server-url" placeholder="Enter LM Studio server address" />
       <select id="model-select" disabled><option value="">Select a model</option></select>
 
+      <!-- NEW center banner -->
+      <div id="header-banner" aria-live="polite" title="Built with care">built by Brian Won</div>
+
       <!-- Background control -->
       <button id="bg-pick-button" class="icon-btn" title="Set background"><i class="fas fa-image"></i></button>
       <input type="file" id="bg-upload" accept="image/*" style="display:none;" />
@@ -312,7 +372,7 @@
       <!-- Connect -->
       <button id="connect-button" title="Connect"><i class="fas fa-plug"></i></button>
 
-      <!-- Persistence controls -->
+      <!-- Persistence controls (hidden on mobile) -->
       <button id="export-chats" class="icon-btn" title="Export chats"><i class="fas fa-download"></i></button>
       <button id="import-chats" class="icon-btn" title="Import chats"><i class="fas fa-upload"></i></button>
       <button id="clear-chats"  class="icon-btn" title="Clear all chats"><i class="fas fa-trash"></i></button>
@@ -354,15 +414,98 @@
   <!-- ========================= JS (ES Modules, single file) ========================= -->
   <script type="module">
     /*
-      ARCHITECTURE OVERVIEW
-      ├── Core: Events, Utils, Storage
-      ├── State: reactive app state (single source of truth)
-      ├── Services: BackgroundService, LMStudioAPI, Health
+      ARCHITECTURE OVERVIEW (maintainable + instrumented)
+      ├── Debug: Logger/Inspector (global, toggle with Ctrl+Alt+D or `)
+      ├── Core: Events (pub/sub with auto-logging), Utils, Storage
+      ├── State: reactive app state (single source of truth; persists to localStorage)
+      ├── Services: BackgroundService, LMStudioAPI (with perf marks), Health
       ├── UI Components: Header, Sidebar, ChatView, InputBar
-      └── AppController: wires everything together
+      └── AppController: wires everything, streaming safe updates
     */
 
-    // ================= Core: Events (simple pub-sub) =================
+    // ================= Debug: Logger & Inspector =================
+    const DEBUG = (() => {
+      // Activation: ?debug=1 or localStorage.debug=1
+      const urlFlag = new URLSearchParams(location.search).get('debug');
+      const isOn = urlFlag === '1' || localStorage.getItem('debug') === '1';
+
+      // Build panel lazily after DOM is ready
+      const panel = document.createElement('div');
+      panel.id = 'debug-panel';
+      panel.innerHTML = `
+        <div id="debug-panel-header">🔎 Debug Inspector</div>
+        <div id="debug-panel-controls">
+          <button data-act="copy">Copy</button>
+          <button data-act="clear">Clear</button>
+          <button data-act="download">Download</button>
+          <button data-act="perf">Mark Perf</button>
+          <span style="margin-left:auto;opacity:.7">Toggle: Ctrl+Alt+D or \`</span>
+        </div>
+        <div id="debug-log" aria-live="polite"></div>
+      `;
+      document.body.appendChild(panel);
+      const logEl = panel.querySelector('#debug-log');
+
+      const ring = [];               // in-memory ring buffer
+      const RING_MAX = 2000;
+      const fmtTS = () => new Date().toISOString().replace('T',' ').replace('Z','');
+      const safeStr = (v) => { try { return typeof v === 'string' ? v : JSON.stringify(v, (_k, val) => (val instanceof Error ? {name:val.name, message:val.message, stack:val.stack} : val)); } catch { return String(v); } };
+
+      const push = (level, msg, payload) => {
+        const item = { ts: fmtTS(), level, msg, payload };
+        ring.push(item); if (ring.length > RING_MAX) ring.shift();
+        const line = `[${item.ts}] ${level.toUpperCase()} • ${msg}` + (payload ? ` → ${safeStr(payload)}` : '');
+        if (panel.classList.contains('open')) { logEl.textContent += line + '\n'; logEl.scrollTop = logEl.scrollHeight; }
+        const c = console[level] || console.log; try { c.call(console, line, payload ?? ''); } catch { console.log(line); }
+      };
+
+      const api = {
+        on: isOn,
+        panel,
+        open() { panel.classList.add('open'); api.flush(); },
+        close() { panel.classList.remove('open'); },
+        toggle() { panel.classList.toggle('open'); api.flush(); },
+        flush() { if (!panel.classList.contains('open')) return; logEl.textContent = ring.map(i => `[${i.ts}] ${i.level.toUpperCase()} • ${i.msg}` + (i.payload?` → ${safeStr(i.payload)}`:'' )).join('\n'); logEl.scrollTop = logEl.scrollHeight; },
+        log: (msg, payload) => push('log', msg, payload),
+        info: (msg, payload) => push('info', msg, payload),
+        warn: (msg, payload) => push('warn', msg, payload),
+        error: (msg, payload) => push('error', msg, payload),
+        event(topic, payload) { push('info', `event:${topic}`, payload); },
+        perfMark(label) { try { performance.mark(label); push('log', `perf:mark ${label}`); } catch{} },
+        perfMeasure(name, start, end) {
+          try { performance.measure(name, start, end); const entry = performance.getEntriesByName(name).pop(); push('log', `perf:measure ${name}`, { durationMs: entry?.duration ?? null }); } catch(e) { push('warn', `perf:measure fail ${name}`, e); }
+        },
+        table(label, rows) { push('info', `table:${label}`, rows); try { console.table?.(rows); } catch {} },
+      };
+
+      // Shortcuts & buttons
+      window.addEventListener('keydown', (e) => {
+        if ((e.ctrlKey && e.altKey && e.key.toLowerCase() === 'd') || e.key === '`') { e.preventDefault(); api.toggle(); }
+      });
+      panel.querySelector('#debug-panel-controls').addEventListener('click', (e) => {
+        const act = e.target.closest('button')?.dataset?.act; if (!act) return;
+        if (act === 'copy') {
+          navigator.clipboard.writeText(logEl.textContent || ring.map(x=>JSON.stringify(x)).join('\n'));
+        } else if (act === 'clear') {
+          ring.length = 0; api.flush();
+        } else if (act === 'download') {
+          const blob = new Blob([logEl.textContent || ring.map(x=>JSON.stringify(x)).join('\n')], {type:'text/plain'});
+          const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `debug-${Date.now()}.log`; a.click(); URL.revokeObjectURL(a.href);
+        } else if (act === 'perf') {
+          api.perfMark('manual'); setTimeout(()=>api.perfMeasure('manual-span','manual'), 120);
+        }
+      });
+
+      // Global error hooks
+      window.addEventListener('error', (e) => api.error('window.error', {message:e.message, stack:e.error?.stack}));
+      window.addEventListener('unhandledrejection', (e) => api.error('unhandledrejection', {reason: e.reason}));
+
+      if (isOn) api.open();
+      window.__DEBUG_INSPECTOR__ = api;
+      return api;
+    })();
+
+    // ================= Core: Events (simple pub-sub with logging) =================
     const Events = (() => {
       const topics = new Map();
       return {
@@ -371,7 +514,10 @@
           topics.get(topic).add(handler);
           return () => topics.get(topic)?.delete(handler);
         },
-        emit(topic, payload) { topics.get(topic)?.forEach(h => { try { h(payload); } catch (e) { console.error(e); } }); },
+        emit(topic, payload) {
+          try { DEBUG.event(topic, payload); } catch {}
+          topics.get(topic)?.forEach(h => { try { h(payload); } catch (e) { console.error(e); DEBUG.error('event.handler', { topic, error: e }); } });
+        },
       };
     })();
 
@@ -395,7 +541,22 @@
         pre.appendChild(button);
       },
       attachCopyButtons(container) { container.querySelectorAll('pre').forEach(Utils.copyButtonForPre); },
-      deepClone(obj){ return JSON.parse(JSON.stringify(obj)); }
+      deepClone(obj){ return JSON.parse(JSON.stringify(obj)); },
+      baseName(name='') { return String(name).split(/[\\/]/).pop()?.replace(/\.(png|jpe?g|gif|webp|bmp|svg)$/i,'') || ''; },
+      approxTokens(s) { return Math.ceil(((s && typeof s === 'string') ? s.length : 0) / 4); },
+
+      /* !!! NEW: typing effect */
+      typeOnce(el, fullText, speed=55){
+        if(!el) return;
+        el.textContent = ''; el.classList.add('typing');
+        let i = 0;
+        const tick = () => {
+          el.textContent = fullText.slice(0, i++);
+          if(i <= fullText.length){ requestAnimationFrame(tick); }
+          else { el.textContent = fullText; }
+        };
+        tick();
+      }
     };
 
     // ================= Core: Storage =================
@@ -406,7 +567,9 @@
         bgImage: 'lmstudio.bgImage',
         bgDim: 'lmstudio.bgDim',
         chats: 'lmstudio.chats',
-        currentChatId: 'lmstudio.currentChatId'
+        currentChatId: 'lmstudio.currentChatId',
+        /* !!! NEW */
+        autoReconnect: 'lmstudio.autoReconnect'
       };
       const safeGet = (k, def = null) => { try { const v = localStorage.getItem(k); return v ?? def; } catch { return def; } };
       const safeSet = (k, v) => { try { localStorage.setItem(k, v); } catch {} };
@@ -433,9 +596,7 @@
         saveCurrentChatId(id) { safeSet(K.currentChatId, String(id || '')); },
         loadCurrentChatId() { return safeGet(K.currentChatId, ''); },
 
-        exportChats() {
-          return JSON.stringify(this.loadChats(), null, 2);
-        },
+        exportChats() { return JSON.stringify(this.loadChats(), null, 2); },
         importChats(json) {
           const data = JSON.parse(json);
           if (!Array.isArray(data)) throw new Error('Invalid chat dump: expected an array.');
@@ -445,6 +606,10 @@
           try { localStorage.removeItem(K.chats); } catch {}
           try { localStorage.removeItem(K.currentChatId); } catch {}
         },
+
+        /* !!! NEW: smart auto-reconnect flag */
+        getAutoReconnect() { return safeGet(K.autoReconnect, '0') === '1'; },
+        setAutoReconnect(on){ safeSet(K.autoReconnect, on ? '1' : '0'); },
       };
     })();
 
@@ -455,8 +620,10 @@
         currentModel: '',
         serverUrl: Storage.getServerUrl() || '',
         pendingImage: null,
+        pendingImageName: null,
         chats: Storage.loadChats(),
         currentChatId: Storage.loadCurrentChatId() || null,
+        lastImageBaseName: null,
       };
 
       const persist = () => {
@@ -475,24 +642,24 @@
         Storage.saveChats(sanitized);
         Storage.saveCurrentChatId(state.currentChatId);
         Storage.setServerUrl(state.serverUrl);
+        DEBUG.info('state.persist', { chats: state.chats.length, currentChatId: state.currentChatId });
       };
 
       const api = {
         get currentChat() { return state.chats.find(c => c.id === state.currentChatId) || null; },
-        ensureChat() {
-          if (!api.currentChat) api.createChat();
-          return api.currentChat;
-        },
+        ensureChat() { if (!api.currentChat) api.createChat(); return api.currentChat; },
         createChat(name) {
           const chat = { id: Utils.uuid(), name: name || `Conversation ${state.chats.length + 1}`, messages: [] };
           state.chats.push(chat); state.currentChatId = chat.id; persist();
           Events.emit('state:chats', state.chats); Events.emit('state:currentChat', chat);
+          DEBUG.log('state.action', { type: 'createChat', id: chat.id });
           return chat;
         },
         deleteChat(id) {
           state.chats = state.chats.filter(c => c.id !== id);
           if (state.currentChatId === id) { state.currentChatId = state.chats[0]?.id || null; }
           persist(); Events.emit('state:chats', state.chats); Events.emit('state:currentChat', api.currentChat);
+          DEBUG.log('state.action', { type: 'deleteChat', id });
         },
         clearAllChats() {
           state.chats = [];
@@ -500,6 +667,7 @@
           persist();
           Events.emit('state:chats', state.chats);
           Events.emit('state:currentChat', null);
+          DEBUG.warn('state.action', { type: 'clearAllChats' });
         },
         replaceChats(newChats) {
           state.chats = Array.isArray(newChats) ? newChats : [];
@@ -507,16 +675,27 @@
           persist();
           Events.emit('state:chats', state.chats);
           Events.emit('state:currentChat', api.currentChat);
+          DEBUG.log('state.action', { type: 'replaceChats', count: state.chats.length });
         },
         renameCurrentChatIfDefault(snippet) {
           const chat = api.currentChat; if (!chat) return;
           if (/^Conversation\s\d+/.test(chat.name) || chat.name.startsWith('Conversation ')) {
             chat.name = snippet ? `Conversation: ${snippet}...` : chat.name;
             persist(); Events.emit('state:chats', state.chats);
+            DEBUG.info('state.rename.auto', { id: chat.id, name: chat.name });
           }
         },
-        addMessage({ content, isUser, metrics = null, isImage = false, imageData = null, text = '' }) {
-          const chat = api.ensureChat();
+        renameChatToImage(chatId, imageName) {
+          const chat = state.chats.find(c => c.id === chatId); if (!chat) return;
+          const base = Utils.baseName(imageName);
+          if (!base) return;
+          chat.name = base;
+          persist(); Events.emit('state:chats', state.chats);
+          DEBUG.info('state.rename.image', { id: chat.id, name: base });
+        },
+        addMessage({ content, isUser, metrics = null, isImage = false, imageData = null, text = '', chatId = null, headerLabel = null }) {
+          const chat = chatId ? state.chats.find(c => c.id === chatId) : api.ensureChat();
+          if (!chat) return;
           chat.messages.push({
             id: Utils.uuid(),
             content,
@@ -526,18 +705,22 @@
             imageData,
             text,
             ts: Date.now(),
+            headerLabel: headerLabel || null,
           });
           persist();
           Events.emit('chat:messageAdded', { chatId: chat.id, message: chat.messages[chat.messages.length - 1] });
+          DEBUG.info('message.add', { chatId: chat.id, isUser, isImage, len: String(content||'').length });
         },
         setConnection({ connected, model }) {
           state.isConnected = connected; if (typeof model === 'string') state.currentModel = model;
           Events.emit('state:connection', { connected, model: state.currentModel }); persist();
+          DEBUG.info('connection.set', { connected, model: state.currentModel });
         },
         setServerUrl(url) { state.serverUrl = url; persist(); Events.emit('state:serverUrl', url); },
         setModel(model) { state.currentModel = model; Events.emit('state:model', model); persist(); },
-        setPendingImage(dataUrl) { state.pendingImage = dataUrl; Events.emit('state:pendingImage', dataUrl); },
-        selectChat(id) { state.currentChatId = id; persist(); Events.emit('state:currentChat', api.currentChat); },
+        setPendingImage(dataUrl, fileName = null) { state.pendingImage = dataUrl; state.pendingImageName = fileName; Events.emit('state:pendingImage', dataUrl); },
+        setLastImageBaseName(name) { state.lastImageBaseName = Utils.baseName(name); },
+        selectChat(id) { state.currentChatId = id; persist(); Events.emit('state:currentChat', api.currentChat); DEBUG.log('state.action', { type: 'selectChat', id }); },
         get snapshot() { return JSON.parse(JSON.stringify(state)); },
       };
       return api;
@@ -555,37 +738,57 @@
       function setFile(file) {
         if (!file || !file.type.startsWith('image/')) return;
         const reader = new FileReader();
-        reader.onload = e => { const dataUrl = e.target.result; Storage.setBgImage(dataUrl); bgLayer.style.backgroundImage = `url('${dataUrl}')`; };
+        reader.onload = e => { const dataUrl = e.target.result; Storage.setBgImage(dataUrl); bgLayer.style.backgroundImage = `url('${dataUrl}')`; DEBUG.info('bg.set', { name: file.name, size: file.size }); };
         reader.readAsDataURL(file);
       }
-      function clear() { Storage.clearBgImage(); bgLayer.style.backgroundImage = ''; }
-      function setDim(v) { const vv = Utils.clamp(parseFloat(v) || 0, 0, 0.8); Storage.setBgDim(vv); document.documentElement.style.setProperty('--dim-amount', String(vv)); }
+      function clear() { Storage.clearBgImage(); bgLayer.style.backgroundImage = ''; DEBUG.log('bg.clear'); }
+      function setDim(v) { const vv = Utils.clamp(parseFloat(v) || 0, 0, 0.8); Storage.setBgDim(vv); document.documentElement.style.setProperty('--dim-amount', String(vv)); DEBUG.info('bg.dim', { value: vv }); }
       return { applyFromStorage, setFile, clear, setDim };
     })();
 
     // ================= Services: LM Studio API =================
     const LMStudioAPI = (() => {
+      /*
+        Role: HTTP wrapper for LM Studio endpoints
+        Endpoints: /v1/models, /v1/model/eject (POST), /v1/chat/completions (POST with stream)
+        Perf Marks: 'models:*', 'chat:*'
+      */
       async function listModels(serverUrl) {
+        DEBUG.perfMark('models:start');
+        DEBUG.info('api.listModels', { serverUrl });
         const res = await fetch(`${serverUrl}/v1/models`);
+        DEBUG.perfMeasure('models:latency','models:start');
+        DEBUG.info('api.listModels.res', { ok: res.ok, status: res.status });
         if (!res.ok) throw new Error('Failed to list models');
         return res.json();
       }
       async function eject(serverUrl, model) {
         try {
-          await fetch(`${serverUrl}/v1/model/eject`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ model })
-          });
-        } catch (e) { console.warn('Eject error:', e); }
+          DEBUG.info('api.eject', { model });
+          await fetch(`${serverUrl}/v1/model/eject`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ model }) });
+        } catch (e) { console.warn('Eject error:', e); DEBUG.warn('api.eject.fail', { error: String(e) }); }
       }
-      async function* streamChat({ serverUrl, model, messages, temperature = 0.7, max_tokens = -1 }) {
+      // UPDATED: include llama.cpp fields like n_keep, and safer defaults
+      async function* streamChat({ serverUrl, model, messages, temperature = 0.7, max_tokens = 512 }) {
+        DEBUG.perfMark('chat:start');
+        DEBUG.info('api.chat.begin', { model, msgCount: messages?.length });
+        const body = {
+          model,
+          messages,
+          temperature,
+          max_tokens,
+          stream: true,
+          // llama.cpp extras — tune as needed
+          n_keep: 1024,
+          repeat_penalty: 1.1,
+          top_k: 40,
+          top_p: 0.95
+        };
         const res = await fetch(`${serverUrl}/v1/chat/completions`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ model, messages, temperature, max_tokens, stream: true })
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body)
         });
-        if (!res.ok || !res.body) throw new Error('Streaming failed');
+        if (!res.ok || !res.body) { DEBUG.error('api.chat.streamStartFail', { status: res.status }); throw new Error('Streaming failed'); }
         const reader = res.body.getReader(); const decoder = new TextDecoder();
         while (true) {
           const { value, done } = await reader.read(); if (done) break;
@@ -594,15 +797,16 @@
           for (const line of lines) {
             if (line.startsWith('data:')) {
               const dataStr = line.slice(5).trim();
-              if (dataStr === '[DONE]') return;
+              if (dataStr === '[DONE]') { DEBUG.perfMeasure('chat:latency','chat:start'); return; }
               try {
                 const parsed = JSON.parse(dataStr);
                 const delta = parsed.choices?.[0]?.delta?.content;
                 if (delta) yield delta;
-              } catch (e) { console.warn('parse', e); }
+              } catch (e) { console.warn('parse', e); DEBUG.warn('api.chat.parse', { err: String(e) }); }
             }
           }
         }
+        DEBUG.perfMeasure('chat:latency','chat:start');
       }
       return { listModels, eject, streamChat };
     })();
@@ -636,9 +840,14 @@
         importBtn: document.getElementById('import-chats'),
         clearBtn:  document.getElementById('clear-chats'),
         importFile:document.getElementById('import-file'),
+
+        /* !!! NEW */
+        banner: document.getElementById('header-banner'),
       };
 
       let longPressTimer = null;
+      /* !!! NEW: manual disconnect guard */
+      let lastDisconnectManual = false;
 
       function setStatus(text, ok) {
         els.status.textContent = text;
@@ -656,15 +865,73 @@
           els.modelSelect.appendChild(opt);
         }
         els.modelSelect.disabled = list.length === 0;
-        // Auto-select first model if present
         if (list.length > 0) els.modelSelect.selectedIndex = 0;
         State.setModel(els.modelSelect.value || '');
       }
 
+      /* !!! NEW: shared connect func */
+      async function tryConnect(serverUrl){
+        DEBUG.log('ui.connect.try', { serverUrl });
+        if (!serverUrl) { setStatus('Please enter a valid server address', false); return false; }
+        try {
+          setStatus('Connecting...', false);
+          const data = await LMStudioAPI.listModels(serverUrl);
+          State.setServerUrl(serverUrl);
+          populateModels(data);
+          State.setConnection({ connected: true });
+          setStatus('Connected', true);
+          Events.emit('network:connected', { serverUrl });
+          Storage.setAutoReconnect(true); // enable smart auto-reconnect after first success
+          DEBUG.info('ui.connect.success', { modelCount: (data?.data||[]).length });
+          DEBUG.table('models', (data?.data||[]).map(m => ({ id: m.id })));
+          return true;
+        } catch (e) {
+          console.error(e);
+          setStatus('Failed to connect', false);
+          DEBUG.error('ui.connect.fail', { message: String(e) });
+          return false;
+        }
+      }
+
+      /* !!! NEW: Smart Reconnect (exponential backoff) */
+      const Reconnect = (() => {
+        let timer = null;
+        let backoff = 2000;       // 2s start
+        const MAX = 30000;        // 30s cap
+
+        function schedule(reason=''){
+          clear();
+          const { serverUrl, isConnected } = State.snapshot;
+          // Conditions:
+          // 1) user has previously connected (flag true)
+          // 2) currently disconnected
+          // 3) URL present
+          // 4) last action wasn't manual disconnect
+          if (!Storage.getAutoReconnect() || isConnected || !serverUrl || lastDisconnectManual) return;
+
+          DEBUG.info('reconnect.schedule', { afterMs: backoff, reason, urlPresent: !!serverUrl });
+          timer = setTimeout(async () => {
+            const ok = await tryConnect(serverUrl);
+            if (ok) { backoff = 2000; }
+            else { backoff = Math.min(backoff * 2, MAX); schedule('retry'); }
+          }, backoff);
+        }
+        function clear(){ if (timer) { clearTimeout(timer); timer = null; } }
+        return { schedule, clear, reset: () => { backoff = 2000; } };
+      })();
+
       function attach() {
-        // Restore URL
         const saved = State.snapshot.serverUrl || Storage.getServerUrl(); if (saved) els.serverUrl.value = saved;
-        els.serverUrl.addEventListener('input', Utils.debounce(() => State.setServerUrl(els.serverUrl.value.trim()), 200));
+
+        // Banner typing once (desktop only)
+        if (els.banner && window.matchMedia('(min-width: 769px)').matches) {
+          Utils.typeOnce(els.banner, 'built by Brian Won', 55);
+        }
+
+        els.serverUrl.addEventListener('input', Utils.debounce(() => {
+          State.setServerUrl(els.serverUrl.value.trim());
+          DEBUG.log('ui.serverUrl.input', { value: els.serverUrl.value.trim() });
+        }, 200));
 
         // Background controls
         els.bgPickButton.addEventListener('mousedown', () => {
@@ -682,32 +949,24 @@
 
         // Connect / Disconnect
         els.connectButton.addEventListener('click', async () => {
+          DEBUG.log('ui.connect.click', {});
           const { isConnected } = State.snapshot;
           if (isConnected) {
+            lastDisconnectManual = true;               // manual disconnect
             State.setConnection({ connected: false });
             setStatus('Disconnected', false);
-            Events.emit('network:disconnected');
+            Events.emit('network:disconnected', { manual: true });
             return;
           }
           const serverUrl = els.serverUrl.value.trim();
-          if (!serverUrl) { setStatus('Please enter a valid server address', false); return; }
-          try {
-            setStatus('Connecting...', false);
-            const data = await LMStudioAPI.listModels(serverUrl);
-            State.setServerUrl(serverUrl);
-            populateModels(data);
-            State.setConnection({ connected: true });
-            setStatus('Connected', true);
-            Events.emit('network:connected', { serverUrl });
-          } catch (e) {
-            console.error(e); setStatus('Failed to connect', false);
-            alert('Unable to connect to LM Studio server');
-          }
+          lastDisconnectManual = false;
+          await tryConnect(serverUrl);
         });
 
         // Model switching
         els.modelSelect.addEventListener('change', async (e) => {
           const newModel = e.target.value; const { serverUrl, currentModel } = State.snapshot;
+          DEBUG.log('ui.model.change', { from: currentModel, to: newModel });
           if (currentModel && currentModel !== newModel) await LMStudioAPI.eject(serverUrl, currentModel);
           State.setModel(newModel);
         });
@@ -720,6 +979,7 @@
           a.download = `lmstudio-chats-${new Date().toISOString().slice(0,19)}.json`;
           a.click();
           URL.revokeObjectURL(a.href);
+          DEBUG.log('ui.export');
         });
 
         els.importBtn?.addEventListener('click', () => els.importFile?.click());
@@ -732,9 +992,11 @@
             const chats = Storage.loadChats();
             State.replaceChats(chats);
             alert('Chats imported.');
+            DEBUG.log('ui.import', { count: chats.length });
           } catch (e) {
             console.error(e);
             alert('Import failed: invalid JSON or structure.');
+            DEBUG.error('ui.import.fail', { error: String(e) });
           } finally {
             els.importFile.value = '';
           }
@@ -744,10 +1006,32 @@
           if (!confirm('Delete all saved chats? This cannot be undone.')) return;
           Storage.clearChats();
           State.clearAllChats();
+          DEBUG.warn('ui.clearAll');
         });
 
-        // React to connection state changes
+        // Connection state reflect
         Events.on('state:connection', ({ connected }) => { setStatus(connected ? 'Connected' : 'Disconnected', connected); });
+
+        /* NEW: net events hook */
+        Events.on('network:connected', () => {
+          lastDisconnectManual = false;
+          Reconnect.clear();
+          Reconnect.reset();
+        });
+        Events.on('network:disconnected', (info) => {
+          if (info?.manual) {
+            Storage.setAutoReconnect(false);   // user chose to stay offline
+            Reconnect.clear();
+          } else {
+            Reconnect.schedule('lost');
+          }
+        });
+
+        // On-load gentle auto-connect (only if user connected before & URL present)
+        const savedUrl = (State.snapshot.serverUrl || Storage.getServerUrl() || '').trim();
+        if (Storage.getAutoReconnect() && savedUrl) {
+          tryConnect(savedUrl).then(ok => { if (!ok) Reconnect.schedule('onload'); });
+        }
       }
 
       return { attach, setStatus };
@@ -772,6 +1056,7 @@
           li.addEventListener('contextmenu', (e) => { e.preventDefault(); showContextMenu(e.pageX, e.pageY, c.id); });
           els.list.appendChild(li);
         }
+        DEBUG.log('sidebar.render', { count: State.snapshot.chats.length, current: State.snapshot.currentChatId });
       }
 
       function showContextMenu(x, y, chatId) {
@@ -796,10 +1081,10 @@
         m.onclick = async (e) => {
           e.stopPropagation();
           State.deleteChat(chatId);
-          // Optional server health ping after delete
           const ok = await Health.ping();
           if (!ok) Header.setStatus('Connected (server did not respond to ping)', false);
           hideContextMenu();
+          DEBUG.warn('ui.chat.delete', { id: chatId });
         };
       }
       function hideContextMenu() { els.contextMenu.style.display = 'none'; els.contextMenu.style.visibility = 'hidden'; }
@@ -807,9 +1092,9 @@
       function bind() {
         els.newChat.addEventListener('click', async () => {
           State.createChat();
-          // Optional server health ping after create
           const ok = await Health.ping();
           if (!ok) Header.setStatus('Connected (server did not respond to ping)', false);
+          DEBUG.log('ui.chat.new');
         });
         els.toggle.addEventListener('click', () => els.sidebar.classList.toggle('collapsed'));
 
@@ -821,11 +1106,13 @@
           els.sidebar.classList.add('open');
           backdrop?.classList.add('show');
           document.body.style.overflow = 'hidden';
+          DEBUG.log('ui.sidebar.mobile', { action: 'open' });
         };
         const close = () => {
           els.sidebar.classList.remove('open');
           backdrop?.classList.remove('show');
           document.body.style.overflow = '';
+          DEBUG.log('ui.sidebar.mobile', { action: 'close' });
         };
 
         mobileBtn?.addEventListener('click', open);
@@ -859,7 +1146,7 @@
 
         const header = document.createElement('div');
         header.className = 'message-header';
-        header.textContent = isUser ? 'You' : 'Assistant';
+        header.textContent = isUser ? 'You' : (msg.headerLabel || 'Assistant');
         wrapper.appendChild(header);
 
         if (!isUser && model) {
@@ -897,27 +1184,28 @@
         container.scrollTop = container.scrollHeight;
       }
 
-      function addStreamingAssistantMessage() {
+      function addStreamingAssistantMessage(headerLabel=null) {
         const shell = document.createElement('div');
         shell.className = 'message assistant-message';
         shell.innerHTML = `
-          <div class="message-header">Assistant</div>
+          <div class="message-header">${headerLabel || 'Assistant'}</div>
           <div class="message-model">${State.snapshot.currentModel || ''}</div>
           <div class="message-metrics">${new Date().toLocaleString()}</div>
-          <div class="message-content"></div>
+          <div class="message-content"><span class="loading-dots">Loading</span></div>
         `;
         container.appendChild(shell);
         container.scrollTop = container.scrollHeight;
-        liveStreamEl = shell;
         return {
           body: shell.querySelector('.message-content'),
-          discard() { if (liveStreamEl) { liveStreamEl.remove(); liveStreamEl = null; } }
+          discard() { shell.remove(); }
         };
       }
 
       function updateStreaming(targetBody, text) {
         targetBody.innerHTML = marked.parse(text);
-        Utils.highlight(targetBody.parentElement); Utils.attachCopyButtons(targetBody.parentElement); Utils.typeset(targetBody.parentElement);
+        const parent = targetBody.parentElement;
+        Utils.highlight(parent); Utils.attachCopyButtons(parent); Utils.typeset(parent);
+        if ((text?.length||0) % 500 < 10) DEBUG.log('ui.stream.chunk', { chars: text.length });
         container.scrollTop = container.scrollHeight;
       }
 
@@ -931,6 +1219,34 @@
       }
       return { bind, addStreamingAssistantMessage, updateStreaming };
     })();
+
+    // ========= NEW: history builder with soft token budget =========
+    function buildHistoryWithCap({ chat, hasImage, ctxSoftLimit = 3500 }) {
+      const SYS = hasImage
+        ? { role: 'system', content: 'You are an AI assistant that analyzes images.' }
+        : { role: 'system', content: 'You are an intelligent assistant. You always provide well-reasoned answers that are both correct and helpful.' };
+
+      let budget = ctxSoftLimit - Utils.approxTokens(SYS.content);
+      const reversed = [...(chat?.messages || [])].reverse();
+      const kept = [];
+
+      for (const m of reversed) {
+        let payload;
+        if (m.isImage && m.imageData) {
+          const text = m.text || "What's in this image?";
+          const label = m.headerLabel ? `[image:${m.headerLabel}] ` : '[image] ';
+          payload = { role: m.isUser ? 'user' : 'assistant', content: label + text };
+        } else {
+          payload = { role: m.isUser ? 'user' : 'assistant', content: m.content || '' };
+        }
+        const cost = Utils.approxTokens(payload.content);
+        if (cost > budget) break;
+        kept.push(payload);
+        budget -= cost;
+      }
+      kept.reverse();
+      return [SYS, ...kept];
+    }
 
     // ================= UI: InputBar =================
     const InputBar = (() => {
@@ -955,7 +1271,10 @@
         const dataURL = await new Promise((resolve, reject) => {
           const r = new FileReader(); r.onload = e => resolve(e.target.result); r.onerror = reject; r.readAsDataURL(file);
         });
-        State.setPendingImage(dataURL); showPendingImage(dataURL); els.input.focus();
+        State.setPendingImage(dataURL, file.name || null);
+        State.setLastImageBaseName(file.name || null);
+        showPendingImage(dataURL); els.input.focus();
+        DEBUG.info('ui.input.image.set', { name: file?.name, size: file?.size });
       }
 
       async function handleTransferItems(dt) {
@@ -972,7 +1291,10 @@
         }
         const url = dt.getData && (dt.getData('text/uri-list') || dt.getData('text/plain'));
         if (url && /^https?:\/\//i.test(url) && /\.(png|jpe?g|gif|webp|bmp|svg)(\?|#|$)/i.test(url)) {
-          State.setPendingImage(url); showPendingImage(url); els.input.focus();
+          State.setPendingImage(url, url);
+          State.setLastImageBaseName(url);
+          showPendingImage(url); els.input.focus();
+          DEBUG.info('ui.input.image.url', { url });
         }
       }
 
@@ -985,13 +1307,13 @@
         els.input.addEventListener('paste', async (e) => {
           const dt = e.clipboardData; if (!dt) return;
           const hasImg = Array.from(dt.items || []).some(i => i.kind === 'file' && i.type.startsWith('image/'));
-          if (hasImg) { e.preventDefault(); await handleTransferItems(dt); }
+          if (hasImg) { e.preventDefault(); await handleTransferItems(dt); DEBUG.info('ui.input.paste.image'); }
         });
         document.addEventListener('paste', async (e) => {
           if (document.activeElement !== els.input) {
             const dt = e.clipboardData; if (!dt) return;
             const hasImg = Array.from(dt.items || []).some(i => i.kind === 'file' && i.type.startsWith('image/'));
-            if (hasImg) { e.preventDefault(); await handleTransferItems(dt); }
+            if (hasImg) { e.preventDefault(); await handleTransferItems(dt); DEBUG.info('ui.input.paste.image.outside'); }
           }
         });
         ;['dragenter','dragover','dragleave','drop'].forEach(evt => {
@@ -1000,7 +1322,7 @@
         els.dropZone.addEventListener('dragenter', () => els.dropZone.classList.add('drop-hover'));
         els.dropZone.addEventListener('dragover',  () => els.dropZone.classList.add('drop-hover'));
         els.dropZone.addEventListener('dragleave', () => els.dropZone.classList.remove('drop-hover'));
-        els.dropZone.addEventListener('drop', async (e) => { els.dropZone.classList.remove('drop-hover'); const dt = e.dataTransfer; await handleTransferItems(dt); });
+        els.dropZone.addEventListener('drop', async (e) => { els.dropZone.classList.remove('drop-hover'); const dt = e.dataTransfer; await handleTransferItems(dt); DEBUG.info('ui.input.drop.image'); });
 
         // Enable/disable with connection
         Events.on('ui:connectionControls', ({ enabled }) => setEnabled(enabled));
@@ -1010,20 +1332,21 @@
       function getMessageAndMaybeImage() {
         const text = els.input.value.trim();
         const img = State.snapshot.pendingImage;
+        const imgName = State.snapshot.pendingImageName;
         if (!text && !img) return null;
 
+        const targetChatId = State.snapshot.currentChatId;
+
         if (img) {
-          State.addMessage({
-            content: `<img src="${img}" style="max-width:100%; border-radius: var(--border-radius);" />`,
-            isUser: true
-          });
-          State.addMessage({ content: text || "What's in this image?", isUser: true, isImage: true, imageData: img, text: text || '' });
-          State.setPendingImage(null); clearPendingPreview(); els.input.value = '';
-          return { kind: 'image', text: text || "What's in this image?", data: img };
+          State.addMessage({ content: `<img src="${img}" style="max-width:100%; border-radius: var(--border-radius);" />`, isUser: true, chatId: targetChatId });
+          State.addMessage({ content: text || "What's in this image?", isUser: true, isImage: true, imageData: img, text: text || '', chatId: targetChatId });
+          if (imgName) State.renameChatToImage(targetChatId, imgName);
+          State.setPendingImage(null, null); clearPendingPreview(); els.input.value = '';
+          return { kind: 'image', text: text || "What's in this image?", data: img, chatId: targetChatId, headerLabel: Utils.baseName(imgName) || null };
         } else {
-          State.addMessage({ content: text, isUser: true });
+          State.addMessage({ content: text, isUser: true, chatId: targetChatId });
           els.input.value = '';
-          return { kind: 'text', text };
+          return { kind: 'text', text, chatId: targetChatId, headerLabel: null };
         }
       }
 
@@ -1034,78 +1357,43 @@
 
     // ================= App Controller =================
     const AppController = (() => {
-      async function buildConversationHistory() {
-        const chat = State.ensureChat();
-        const hasImage = chat.messages.some(m => m.isImage);
-        const systemPrompt = hasImage
-          ? 'You are an AI assistant that analyzes images.'
-          : 'You are an intelligent assistant. You always provide well-reasoned answers that are both correct and helpful.';
-        const history = [{ role: 'system', content: systemPrompt }];
-        for (const msg of chat.messages) {
-          if (msg.isImage && msg.imageData) {
-            history.push({
-              role: msg.isUser ? 'user' : 'assistant',
-              content: [
-                { type: 'text', text: msg.text || "What's in this image?" },
-                { type: 'image_url', image_url: { url: msg.imageData } }
-              ]
-            });
-          } else {
-            history.push({ role: msg.isUser ? 'user' : 'assistant', content: msg.content });
-          }
-        }
-        return history;
-      }
-
-      function bindSend() {
-        const sendBtn = document.getElementById('send-button');
-        const input = document.getElementById('user-input');
-        sendBtn.addEventListener('click', onSend);
-        input.addEventListener('keypress', (e) => { if (e.key === 'Enter') onSend(); });
-      }
-
       async function onSend() {
-        // Guard: must be connected + have URL + have model
         const { serverUrl, currentModel, isConnected } = State.snapshot;
-        if (!isConnected) {
-          Header.setStatus('Disconnected', false);
-          alert('Connect to the LM Studio server first.');
-          return;
-        }
-        if (!serverUrl) {
-          alert('Missing server URL.');
-          return;
-        }
-        if (!currentModel) {
-          alert('Pick a model before sending.');
-          return;
-        }
+        DEBUG.log('onSend.begin', { isConnected, hasModel: !!currentModel });
+        if (!isConnected) { Header.setStatus('Disconnected', false); alert('Connect to the LM Studio server first.'); return; }
+        if (!serverUrl) { alert('Missing server URL.'); return; }
+        if (!currentModel) { alert('Pick a model before sending.'); return; }
 
         const req = InputBar.getMessageAndMaybeImage();
         if (!req) return;
 
-        // streaming shell (returns { body, discard })
-        const stream = ChatView.addStreamingAssistantMessage();
+        const targetChatId = req.chatId;
+        const headerLabel = req.headerLabel;
+
+        let stream = null;
+        if (State.snapshot.currentChatId === targetChatId) {
+          stream = ChatView.addStreamingAssistantMessage(headerLabel);
+        }
         let acc = '';
 
-        const messages = await buildConversationHistory();
+        const chatForHistory = State.snapshot.chats.find(c => c.id === targetChatId) || State.ensureChat();
+        const hasImage = chatForHistory.messages.some(m => m.isImage);
+        const history = buildHistoryWithCap({ chat: chatForHistory, hasImage, ctxSoftLimit: 3500 });
 
         try {
-          for await (const delta of LMStudioAPI.streamChat({ serverUrl, model: currentModel, messages })) {
-            acc += delta; ChatView.updateStreaming(stream.body, acc);
+          for await (const delta of LMStudioAPI.streamChat({ serverUrl, model: currentModel, messages: history })) {
+            acc += delta;
+            if (stream) ChatView.updateStreaming(stream.body, acc);
           }
-          // Remove ephemeral bubble first, then persist the final assistant message
-          stream.discard();
-          State.addMessage({ content: acc, isUser: false });
-          State.renameCurrentChatIfDefault(acc.split(' ').slice(0, 7).join(' '));
+          if (stream) stream.discard();
+          State.addMessage({ content: acc, isUser: false, chatId: targetChatId, headerLabel });
+          if (!headerLabel) State.renameCurrentChatIfDefault(acc.split(' ').slice(0, 7).join(' '));
+          DEBUG.info('onSend.done', { size: acc.length });
         } catch (e) {
           console.error(e);
-          stream.discard();
-          State.addMessage({
-            content: 'Send failed (connection kept). Check server URL, CORS, model, and try again.',
-            isUser: false
-          });
-          // NOTE: do NOT auto-toggle to Disconnected here
+          if (stream) stream.discard();
+          State.addMessage({ content: 'Send failed (connection kept). Check server URL, CORS, model, and try again.', isUser: false, chatId: targetChatId, headerLabel });
+          DEBUG.error('onSend.error', { error: String(e) });
         } finally {
           InputBar.focus();
         }
@@ -1113,18 +1401,15 @@
 
       function init() {
         BackgroundService.applyFromStorage();
-
-        // UI components
         Header.attach(); Sidebar.bind(); ChatView.bind(); InputBar.bind();
-
-        // Initial chat if none
         if (!State.snapshot.currentChatId || !State.snapshot.chats.length) State.createChat();
-
-        // Initial focus
         const urlInput = document.getElementById('server-url'); urlInput.focus();
 
-        // Bind send
-        bindSend();
+        // Bind send controls
+        const sendBtn = document.getElementById('send-button');
+        const input = document.getElementById('user-input');
+        sendBtn.addEventListener('click', onSend);
+        input.addEventListener('keypress', (e) => { if (e.key === 'Enter') onSend(); });
       }
 
       return { init };
