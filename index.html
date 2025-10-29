@@ -3,227 +3,11 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover" />
-  <title>LM Studio Chat · Mobile Optimized</title>
-  <!-- Inter font -->
+  <title>LM Studio Chat · Modular</title>
+  <!-- Fonts & libs -->
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
-  <!-- Icons & highlight -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/styles/atom-one-dark.min.css" />
-
-  <style>
-    /* =========================================================
-       LM Studio Chat — Mobile-first + Custom Background (LS)
-       - Polished touch targets, safe-area padding, sticky input
-       - Background image picker (PNG/JPG/WebP) with localStorage
-       ========================================================= */
-
-    /* THEME TOKENS */
-    :root,
-    :root[data-theme="light"] {
-      --background-color: #f5f7fa;
-      --text-color: #0f141b;
-      --input-background: #e9edf3;
-      --user-message-color: #dbe3ed;
-      --assistant-message-color: #eef2f7;
-      --button-color: #2b85ff;
-      --accent-color: #7cc0ff;
-      --border-radius: 12px;
-      --transition-speed: 0.25s;
-      --shadow: 0 2px 10px rgba(15, 20, 27, 0.12);
-      --border-color: rgba(15, 20, 27, 0.15);
-      --muted-text: #4a5562;
-      --surface-tint: rgba(43, 133, 255, 0.06);
-      --dim-amount: 0.25; /* overlay on background */
-      --blur-amount: 6px; /* mobile readability */
-    }
-    :root[data-theme="dark"] {
-      --background-color: #0e1116;
-      --text-color: #e6e8eb;
-      --input-background: #161b22;
-      --user-message-color: #1f242d;
-      --assistant-message-color: #151a21;
-      --button-color: #2b85ff;
-      --accent-color: #7cc0ff;
-      --border-radius: 12px;
-      --transition-speed: 0.25s;
-      --shadow: 0 8px 24px rgba(0,0,0,0.35);
-      --border-color: rgba(255,255,255,0.08);
-      --muted-text: #b6c0cc;
-      --surface-tint: rgba(124, 192, 255, 0.08);
-      --dim-amount: 0.32;
-      --blur-amount: 8px;
-    }
-
-    @media (prefers-color-scheme: dark) {
-      :root:not([data-theme]) {
-        color-scheme: dark;
-      }
-    }
-
-    /* RESET & BASE */
-    * { box-sizing: border-box; }
-    html, body { height: 100%; margin: 0; }
-    body {
-      background: var(--background-color);
-      color: var(--text-color);
-      font-family: 'Inter', system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
-      line-height: 1.45;
-      -webkit-font-smoothing: antialiased;
-      -moz-osx-font-smoothing: grayscale;
-    }
-
-    a { color: var(--accent-color); text-decoration: none; }
-    a:hover { text-decoration: underline; }
-
-    /* BACKGROUND LAYER (custom image) */
-    #bg-layer {
-      position: fixed; inset: 0; z-index: -2;
-      background-position: center; background-repeat: no-repeat; background-size: cover;
-      transition: opacity var(--transition-speed) ease;
-    }
-    #bg-dim {
-      position: fixed; inset: 0; z-index: -1;
-      backdrop-filter: blur(var(--blur-amount));
-      background: color-mix(in oklab, #000 100%, transparent calc(100% - calc(var(--dim-amount) * 100%)));
-      pointer-events: none;
-    }
-
-    /* APP LAYOUT */
-    #app { display: flex; flex-direction: column; height: 100dvh; }
-
-    /* Header — condensed on phones */
-    #server-url-container {
-      padding: 0.5rem env(safe-area-inset-right) 0.5rem env(safe-area-inset-left);
-      background: color-mix(in oklab, var(--input-background) 92%, transparent);
-      display: grid; gap: 0.5rem; align-items: center;
-      grid-template-columns: 1fr auto auto auto; /* url | model | bg | connect */
-      border-bottom: 1px solid var(--border-color);
-      box-shadow: var(--shadow);
-    }
-    #server-url, #model-select {
-      min-width: 0;
-      padding: 0.65rem 0.75rem; font-size: 0.95rem;
-      border: 1px solid var(--border-color); border-radius: var(--border-radius);
-      background: var(--background-color); color: var(--text-color);
-    }
-    #model-select { width: min(42vw, 210px); }
-
-    .icon-btn {
-      display: inline-flex; align-items: center; justify-content: center;
-      width: 40px; height: 40px; border-radius: 10px; cursor: pointer;
-      background: var(--button-color); color: var(--text-color);
-      border: none; transition: transform var(--transition-speed), background var(--transition-speed);
-    }
-    .icon-btn:hover { background: var(--accent-color); transform: translateY(-1px); }
-    .icon-btn:active { transform: translateY(0); }
-
-    #connect-button {
-      padding: 0 0.9rem; min-width: 44px; height: 40px; border-radius: 10px; border: none;
-      background: var(--button-color); color: var(--text-color); font-weight: 600; cursor: pointer;
-    }
-    #connection-status {
-      text-align: center; padding: 0.4rem 0.6rem; font-size: 0.85rem;
-      background: color-mix(in oklab, var(--input-background) 80%, transparent);
-      color: var(--muted-text); border-bottom: 1px solid var(--border-color);
-    }
-
-    /* MAIN */
-    #main-content { display: grid; grid-template-columns: 280px 1fr; min-height: 0; flex: 1; }
-
-    /* Sidebar */
-    #chat-sidebar {
-      background: color-mix(in oklab, var(--input-background) 96%, transparent);
-      border-right: 1px solid var(--border-color); position: relative; overflow: hidden;
-    }
-    #toggle-sidebar { position: absolute; top: 10px; right: 10px; z-index: 2; }
-    .sidebar-content { padding: 0.85rem; height: 100%; display: flex; flex-direction: column; gap: 0.7rem; }
-    #chat-sidebar-header { display: flex; justify-content: space-between; align-items: center; font-weight: 700; }
-    #new-chat-button {
-      width: 100%; padding: 0.6rem 0.75rem; border: none; border-radius: 10px; font-weight: 600;
-      background: var(--button-color); color: var(--text-color); cursor: pointer;
-    }
-    #chat-list { list-style: none; margin: 0; padding: 0; overflow-y: auto; }
-    #chat-list li {
-      padding: 0.6rem 0.65rem; border-radius: 10px; margin-bottom: 0.45rem; cursor: pointer;
-      background: var(--background-color); border: 1px solid var(--border-color);
-      white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 0.92rem;
-    }
-    #chat-list li:hover { background: var(--input-background); }
-    #chat-list li.active { background: var(--button-color); color: var(--text-color); border-color: transparent; font-weight: 700; }
-
-    /* Chat area */
-    #chat-section { display: flex; flex-direction: column; min-height: 0; padding: 0.75rem; gap: 0.75rem; }
-    #chat-container {
-      flex: 1; overflow-y: auto; padding: 0.75rem; display: flex; flex-direction: column; gap: 0.75rem;
-      background: color-mix(in oklab, var(--surface-tint) 60%, transparent);
-      border: 1px solid var(--border-color); border-radius: var(--border-radius);
-    }
-
-    .message { max-width: 86%; padding: 0.85rem 1rem; border-radius: var(--border-radius); word-wrap: break-word;
-      font-size: clamp(0.95rem, 0.95rem + 0.1vw, 1.02rem); line-height: 1.6; background: var(--assistant-message-color);
-      border: 1px solid var(--border-color); box-shadow: var(--shadow); position: relative; animation: fadeIn 0.25s ease both; }
-    .user-message { align-self: flex-end; background: var(--user-message-color); }
-    .assistant-message { align-self: flex-start; }
-
-    .message-header { font-weight: 700; margin-bottom: 0.25rem; font-size: 0.85rem; }
-    .message-model, .message-metrics { font-size: 0.76rem; color: var(--muted-text); }
-    .message-content { margin-top: 0.2rem; }
-
-    .message-content pre {
-      background: color-mix(in oklab, #0b0f14 85%, var(--background-color));
-      color: #d7dde4; padding: 0.85rem; overflow-x: auto; border-radius: 10px; border: 1px solid var(--border-color);
-    }
-    .message-content code { background: rgba(15,20,27,0.14); padding: 0.15em 0.35em; border-radius: 4px; }
-
-    .copy-btn { position: absolute; top: 6px; right: 6px; border: none; border-radius: 8px; cursor: pointer;
-      font-size: 0.74rem; padding: 3px 9px; opacity: 0.95; background: var(--accent-color); color: var(--text-color); }
-
-    /* Input row — sticky with safe-area padding */
-    #input-container {
-      position: sticky; bottom: 0;
-      padding: 0.5rem calc(0.5rem + env(safe-area-inset-right)) calc(0.5rem + env(safe-area-inset-bottom)) calc(0.5rem + env(safe-area-inset-left));
-      display: grid; grid-template-columns: auto 1fr auto; gap: 0.5rem; align-items: center;
-      background: color-mix(in oklab, var(--input-background) 94%, transparent);
-      border: 1px solid var(--border-color); border-radius: 12px;
-      box-shadow: var(--shadow);
-    }
-    #upload-button, #send-button, #bg-pick-button, #bg-clear-button { width: 44px; height: 44px; border-radius: 12px; }
-
-    #user-input {
-      min-height: 44px; padding: 0.7rem 0.8rem; border-radius: 12px; border: 1px solid var(--border-color);
-      background: var(--background-color); color: var(--text-color); font-size: 1rem;
-    }
-    #user-input::placeholder { color: color-mix(in oklab, var(--muted-text) 70%, transparent); }
-
-    #image-preview { display: none; max-width: 54px; }
-
-    /* Context menu */
-    #context-menu { display: none; position: absolute; background: var(--button-color); color: var(--text-color);
-      padding: 0.5rem 0.6rem; border-radius: 8px; z-index: 1000; cursor: pointer; font-size: 0.9rem; box-shadow: var(--shadow); }
-
-    /* Drop affordance */
-    #input-container.drop-hover { outline: 2px dashed color-mix(in oklab, var(--accent-color) 60%, transparent); outline-offset: -6px; }
-
-    /* Mobile tweaks */
-    @media (max-width: 768px) {
-      #main-content { grid-template-columns: 1fr; }
-      #chat-sidebar { display: none; }
-      #server-url-container { grid-template-columns: 1fr auto auto auto; }
-      #model-select { width: 36vw; }
-      .message { max-width: 92%; }
-    }
-    @media (max-width: 420px) {
-      #server-url { font-size: 0.9rem; }
-      #model-select { display: none; } /* keep header compact on very small phones */
-      #connect-button { height: 40px; padding: 0 0.75rem; }
-    }
-
-    @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
-    *::-webkit-scrollbar { width: 10px; height: 10px; }
-    *::-webkit-scrollbar-thumb { background: color-mix(in oklab, var(--accent-color) 35%, #0000); border-radius: 10px; border: 2px solid transparent; background-clip: padding-box; }
-    *::-webkit-scrollbar-track { background: transparent; }
-  </style>
-
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/highlight.min.js"></script>
   <!-- MathJax for LaTeX -->
@@ -231,6 +15,94 @@
     window.MathJax = { tex: { inlineMath: [['$','$'], ['\\(','\\)']], displayMath: [['$$','$$'], ['\\[','\\]']], processEscapes: true, packages: {'[+]': ['noerrors', 'noundefined']} }, options: { skipHtmlTags: ['script','noscript','style','textarea','pre'], ignoreHtmlClass: 'tex2jax_ignore', processHtmlClass: 'tex2jax_process' }, svg: { fontCache: 'global' } };
   </script>
   <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js" async></script>
+
+  <style>
+    /* =========================================================
+       LM Studio Chat — Modular Single File
+       - Maintainable structure through JS modules & components
+       - Background image picker + dim/blur controls (localStorage)
+       - Mobile-first layout, safe-area paddings, sticky input
+       ========================================================= */
+
+    /* THEME TOKENS */
+    :root, :root[data-theme="light"] {
+      --background-color: #f5f7fa; --text-color: #0f141b; --input-background: #e9edf3;
+      --user-message-color: #dbe3ed; --assistant-message-color: #eef2f7; --button-color: #2b85ff; --accent-color: #7cc0ff;
+      --border-radius: 12px; --transition-speed: 0.25s; --shadow: 0 2px 10px rgba(15, 20, 27, 0.12);
+      --border-color: rgba(15, 20, 27, 0.15); --muted-text: #4a5562; --surface-tint: rgba(43, 133, 255, 0.06);
+      --dim-amount: 0.25; --blur-amount: 6px;
+    }
+    :root[data-theme="dark"] {
+      --background-color: #0e1116; --text-color: #e6e8eb; --input-background: #161b22; --user-message-color: #1f242d; --assistant-message-color: #151a21;
+      --button-color: #2b85ff; --accent-color: #7cc0ff; --border-radius: 12px; --transition-speed: 0.25s; --shadow: 0 8px 24px rgba(0,0,0,0.35);
+      --border-color: rgba(255,255,255,0.08); --muted-text: #b6c0cc; --surface-tint: rgba(124, 192, 255, 0.08); --dim-amount: 0.32; --blur-amount: 8px;
+    }
+    @media (prefers-color-scheme: dark) { :root:not([data-theme]) { color-scheme: dark; } }
+
+    * { box-sizing: border-box; } html, body { height: 100%; margin: 0; }
+    body { background: var(--background-color); color: var(--text-color); font-family: 'Inter', system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; line-height: 1.45; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
+    a { color: var(--accent-color); text-decoration: none; } a:hover { text-decoration: underline; }
+
+    /* BACKGROUND LAYER (custom image) */
+    #bg-layer { position: fixed; inset: 0; z-index: -2; background-position: center; background-repeat: no-repeat; background-size: cover; transition: opacity var(--transition-speed) ease; }
+    #bg-dim { position: fixed; inset: 0; z-index: -1; backdrop-filter: blur(var(--blur-amount)); background: color-mix(in oklab, #000 100%, transparent calc(100% - calc(var(--dim-amount) * 100%))); pointer-events: none; }
+
+    /* APP LAYOUT */
+    #app { display: flex; flex-direction: column; height: 100dvh; }
+
+    /* Header */
+    #server-url-container { padding: 0.5rem env(safe-area-inset-right) 0.5rem env(safe-area-inset-left); background: color-mix(in oklab, var(--input-background) 92%, transparent); display: grid; gap: 0.5rem; align-items: center; grid-template-columns: 1fr auto auto auto; border-bottom: 1px solid var(--border-color); box-shadow: var(--shadow); }
+    #server-url, #model-select { min-width: 0; padding: 0.65rem 0.75rem; font-size: 0.95rem; border: 1px solid var(--border-color); border-radius: var(--border-radius); background: var(--background-color); color: var(--text-color); }
+    #model-select { width: min(42vw, 210px); }
+    .icon-btn { display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 40px; border-radius: 10px; cursor: pointer; background: var(--button-color); color: var(--text-color); border: none; transition: transform var(--transition-speed), background var(--transition-speed); }
+    .icon-btn:hover { background: var(--accent-color); transform: translateY(-1px); }
+    .icon-btn:active { transform: translateY(0); }
+    #connect-button { padding: 0 0.9rem; min-width: 44px; height: 40px; border-radius: 10px; border: none; background: var(--button-color); color: var(--text-color); font-weight: 600; cursor: pointer; }
+    #connection-status { text-align: center; padding: 0.4rem 0.6rem; font-size: 0.85rem; background: color-mix(in oklab, var(--input-background) 80%, transparent); color: var(--muted-text); border-bottom: 1px solid var(--border-color); }
+
+    /* MAIN */
+    #main-content { display: grid; grid-template-columns: 280px 1fr; min-height: 0; flex: 1; }
+
+    /* Sidebar */
+    #chat-sidebar { background: color-mix(in oklab, var(--input-background) 96%, transparent); border-right: 1px solid var(--border-color); position: relative; overflow: hidden; }
+    #toggle-sidebar { position: absolute; top: 10px; right: 10px; z-index: 2; }
+    .sidebar-content { padding: 0.85rem; height: 100%; display: flex; flex-direction: column; gap: 0.7rem; }
+    #chat-sidebar-header { display: flex; justify-content: space-between; align-items: center; font-weight: 700; }
+    #new-chat-button { width: 100%; padding: 0.6rem 0.75rem; border: none; border-radius: 10px; font-weight: 600; background: var(--button-color); color: var(--text-color); cursor: pointer; }
+    #chat-list { list-style: none; margin: 0; padding: 0; overflow-y: auto; }
+    #chat-list li { padding: 0.6rem 0.65rem; border-radius: 10px; margin-bottom: 0.45rem; cursor: pointer; background: var(--background-color); border: 1px solid var(--border-color); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 0.92rem; }
+    #chat-list li:hover { background: var(--input-background); }
+    #chat-list li.active { background: var(--button-color); color: var(--text-color); border-color: transparent; font-weight: 700; }
+
+    /* Chat area */
+    #chat-section { display: flex; flex-direction: column; min-height: 0; padding: 0.75rem; gap: 0.75rem; }
+    #chat-container { flex: 1; overflow-y: auto; padding: 0.75rem; display: flex; flex-direction: column; gap: 0.75rem; background: color-mix(in oklab, var(--surface-tint) 60%, transparent); border: 1px solid var(--border-color); border-radius: var(--border-radius); }
+    .message { max-width: 86%; padding: 0.85rem 1rem; border-radius: var(--border-radius); word-wrap: break-word; font-size: clamp(0.95rem, 0.95rem + 0.1vw, 1.02rem); line-height: 1.6; background: var(--assistant-message-color); border: 1px solid var(--border-color); box-shadow: var(--shadow); position: relative; animation: fadeIn 0.25s ease both; }
+    .user-message { align-self: flex-end; background: var(--user-message-color); }
+    .assistant-message { align-self: flex-start; }
+    .message-header { font-weight: 700; margin-bottom: 0.25rem; font-size: 0.85rem; }
+    .message-model, .message-metrics { font-size: 0.76rem; color: var(--muted-text); }
+    .message-content { margin-top: 0.2rem; }
+    .message-content pre { background: color-mix(in oklab, #0b0f14 85%, var(--background-color)); color: #d7dde4; padding: 0.85rem; overflow-x: auto; border-radius: 10px; border: 1px solid var(--border-color); }
+    .message-content code { background: rgba(15,20,27,0.14); padding: 0.15em 0.35em; border-radius: 4px; }
+    .copy-btn { position: absolute; top: 6px; right: 6px; border: none; border-radius: 8px; cursor: pointer; font-size: 0.74rem; padding: 3px 9px; opacity: 0.95; background: var(--accent-color); color: var(--text-color); }
+
+    /* Input row */
+    #input-container { position: sticky; bottom: 0; padding: 0.5rem calc(0.5rem + env(safe-area-inset-right)) calc(0.5rem + env(safe-area-inset-bottom)) calc(0.5rem + env(safe-area-inset-left)); display: grid; grid-template-columns: auto 1fr auto; gap: 0.5rem; align-items: center; background: color-mix(in oklab, var(--input-background) 94%, transparent); border: 1px solid var(--border-color); border-radius: 12px; box-shadow: var(--shadow); }
+    #upload-button, #send-button, #bg-pick-button { width: 44px; height: 44px; border-radius: 12px; }
+    #user-input { min-height: 44px; padding: 0.7rem 0.8rem; border-radius: 12px; border: 1px solid var(--border-color); background: var(--background-color); color: var(--text-color); font-size: 1rem; }
+    #user-input::placeholder { color: color-mix(in oklab, var(--muted-text) 70%, transparent); }
+    #image-preview { display: none; max-width: 54px; }
+
+    /* Mobile tweaks */
+    @media (max-width: 768px) { #main-content { grid-template-columns: 1fr; } #chat-sidebar { display: none; } #server-url-container { grid-template-columns: 1fr auto auto auto; } #model-select { width: 36vw; } .message { max-width: 92%; } }
+    @media (max-width: 420px) { #server-url { font-size: 0.9rem; } #model-select { display: none; } #connect-button { height: 40px; padding: 0 0.75rem; } }
+
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+    *::-webkit-scrollbar { width: 10px; height: 10px; }
+    *::-webkit-scrollbar-thumb { background: color-mix(in oklab, var(--accent-color) 35%, #0000); border-radius: 10px; border: 2px solid transparent; background-clip: padding-box; }
+    *::-webkit-scrollbar-track { background: transparent; }
+  </style>
 </head>
 <body>
   <!-- Background layers -->
@@ -241,14 +113,11 @@
     <!-- Header -->
     <div id="server-url-container">
       <input type="text" id="server-url" placeholder="Enter LM Studio server address" />
-      <select id="model-select" disabled>
-        <option value="">Select a model</option>
-      </select>
+      <select id="model-select" disabled><option value="">Select a model</option></select>
       <button id="bg-pick-button" class="icon-btn" title="Set background"><i class="fas fa-image"></i></button>
       <button id="connect-button" title="Connect"><i class="fas fa-plug"></i></button>
       <input type="file" id="bg-upload" accept="image/*" style="display:none;" />
     </div>
-
     <div id="connection-status">Disconnected</div>
 
     <div id="main-content">
@@ -278,443 +147,472 @@
 
   <!-- Context menu & hidden controls -->
   <div id="context-menu">Delete Chat</div>
-  <input type="file" id="hidden-bg-input" accept="image/*" style="display:none;" />
 
-  <script>
-    // ====== DOM refs ======
-    const chatContainer = document.getElementById('chat-container');
-    const userInput = document.getElementById('user-input');
-    const serverUrlInput = document.getElementById('server-url');
-    const connectButton = document.getElementById('connect-button');
-    const connectionStatus = document.getElementById('connection-status');
-    const sendButton = document.getElementById('send-button');
-    const newChatButton = document.getElementById('new-chat-button');
-    const toggleSidebarButton = document.getElementById('toggle-sidebar');
-    const chatSidebar = document.getElementById('chat-sidebar');
-    const chatList = document.getElementById('chat-list');
-    const contextMenu = document.getElementById('context-menu');
-    const modelSelect = document.getElementById('model-select');
-    const uploadButton = document.getElementById('upload-button');
-    const imageUpload = document.getElementById('image-upload');
-    const imagePreview = document.getElementById('image-preview');
-    const dropZone = document.getElementById('input-container');
+  <!-- ========================= JS (ES Modules, single file) ========================= -->
+  <script type="module">
+    /*
+      ARCHITECTURE OVERVIEW
+      ├── Core: Events, Utils, Storage
+      ├── State: reactive app state (single source of truth)
+      ├── Services: BackgroundService, LMStudioAPI
+      ├── UI Components: Header, Sidebar, ChatView, InputBar
+      └── AppController: wires everything together
 
-    const bgLayer = document.getElementById('bg-layer');
-    const bgDim = document.getElementById('bg-dim');
-    const bgPickButton = document.getElementById('bg-pick-button');
-    const bgUpload = document.getElementById('bg-upload');
+      EXTENSION POINTS
+      - Add a new service (e.g., SettingsService): register in AppController.init()
+      - Add a new UI component: implement mount(), bind(), expose events; register in AppController
+      - Add commands (slash/toolbar): extend InputBar and listen on Events
+    */
 
-    let isConnected = false;
-    let currentModel = '';
-    let pendingImage = null;
+    // ================= Core: Events (simple pub-sub) =================
+    const Events = (() => {
+      const topics = new Map();
+      return {
+        on(topic, handler) {
+          if (!topics.has(topic)) topics.set(topic, new Set());
+          topics.get(topic).add(handler);
+          return () => topics.get(topic)?.delete(handler);
+        },
+        emit(topic, payload) { topics.get(topic)?.forEach(h => { try { h(payload); } catch (e) { console.error(e); } }); },
+      };
+    })();
 
-    // Chat state
-    let chats = [];
-    let currentChat = null;
-
-    // ====== Storage keys ======
-    const STORAGE = {
-      serverUrl: 'lmstudio.serverUrl',
-      recentServers: 'lmstudio.recentServers',
-      bgImage: 'lmstudio.bgImage', // dataURL string
-      bgDim: 'lmstudio.bgDim' // 0..1 string
+    // ================= Core: Utils =================
+    const Utils = {
+      debounce(fn, ms = 250) { let t; return (...args) => { clearTimeout(t); t = setTimeout(() => fn(...args), ms); }; },
+      clamp(n, min, max) { return Math.max(min, Math.min(max, n)); },
+      uuid() { return Math.random().toString(36).slice(2) + Date.now().toString(36); },
+      highlight(container) { container.querySelectorAll('pre code').forEach(block => hljs.highlightElement(block)); },
+      async typeset(el) { if (window.MathJax) { try { await MathJax.typesetPromise([el]); } catch (e) { console.warn('MathJax:', e); } } },
+      copyButtonForPre(pre) {
+        if (pre.querySelector('.copy-btn')) return;
+        pre.style.position = 'relative';
+        const button = document.createElement('button');
+        button.className = 'copy-btn';
+        button.innerHTML = '<i class="fas fa-copy"></i> Copy';
+        button.addEventListener('click', () => {
+          const codeText = pre.querySelector('code')?.innerText || '';
+          navigator.clipboard.writeText(codeText).then(() => { button.innerText = 'Copied!'; setTimeout(() => (button.innerHTML = '<i class="fas fa-copy"></i> Copy'), 1400); });
+        });
+        pre.appendChild(button);
+      },
+      attachCopyButtons(container) { container.querySelectorAll('pre').forEach(Utils.copyButtonForPre); },
     };
 
-    // ====== Helpers: localStorage ======
-    function saveServerUrl(url) {
-      if (!url) return;
-      try {
-        localStorage.setItem(STORAGE.serverUrl, url);
-        const raw = localStorage.getItem(STORAGE.recentServers);
-        const list = raw ? JSON.parse(raw) : [];
-        const next = [url, ...list.filter(x => x !== url)].slice(0, 5);
-        localStorage.setItem(STORAGE.recentServers, JSON.stringify(next));
-      } catch {}
-    }
-    function loadServerUrl() {
-      try { return localStorage.getItem(STORAGE.serverUrl) || ''; } catch { return ''; }
-    }
-
-    // ====== Background: apply / pick / clear ======
-    function applyBackgroundFromStorage() {
-      const dataUrl = localStorage.getItem(STORAGE.bgImage);
-      const dim = parseFloat(localStorage.getItem(STORAGE.bgDim) || '');
-      if (dataUrl) {
-        bgLayer.style.backgroundImage = `url('${dataUrl}')`;
-        document.body.style.backgroundColor = 'transparent';
-      }
-      if (!isNaN(dim)) {
-        document.documentElement.style.setProperty('--dim-amount', String(Math.max(0, Math.min(0.8, dim))));
-      }
-    }
-    function setBackgroundFile(file) {
-      if (!file || !file.type.startsWith('image/')) return;
-      const reader = new FileReader();
-      reader.onload = e => {
-        const dataUrl = e.target.result;
-        try { localStorage.setItem(STORAGE.bgImage, dataUrl); } catch {}
-        bgLayer.style.backgroundImage = `url('${dataUrl}')`;
+    // ================= Core: Storage =================
+    const Storage = (() => {
+      const K = { serverUrl: 'lmstudio.serverUrl', recentServers: 'lmstudio.recentServers', bgImage: 'lmstudio.bgImage', bgDim: 'lmstudio.bgDim', chats: 'lmstudio.chats', currentChatId: 'lmstudio.currentChatId' };
+      const safeGet = (k, def = null) => { try { const v = localStorage.getItem(k); return v ?? def; } catch { return def; } };
+      const safeSet = (k, v) => { try { localStorage.setItem(k, v); } catch {} };
+      const jsonGet = (k, def = null) => { try { const raw = localStorage.getItem(k); return raw ? JSON.parse(raw) : def; } catch { return def; } };
+      const jsonSet = (k, obj) => { try { localStorage.setItem(k, JSON.stringify(obj)); } catch {} };
+      return {
+        K,
+        getServerUrl() { return safeGet(K.serverUrl, ''); },
+        setServerUrl(url) {
+          safeSet(K.serverUrl, url);
+          const list = jsonGet(K.recentServers, []);
+          const next = [url, ...list.filter(x => x !== url)].slice(0, 5);
+          jsonSet(K.recentServers, next);
+        },
+        getBgImage() { return safeGet(K.bgImage, ''); },
+        setBgImage(dataUrl) { safeSet(K.bgImage, dataUrl); },
+        clearBgImage() { try { localStorage.removeItem(K.bgImage); } catch {} },
+        getBgDim() { const v = parseFloat(safeGet(K.bgDim, '')); return Number.isFinite(v) ? v : null; },
+        setBgDim(v) { safeSet(K.bgDim, String(v)); },
+        saveChats(chats) { jsonSet(K.chats, chats); },
+        loadChats() { return jsonGet(K.chats, []); },
+        saveCurrentChatId(id) { safeSet(K.currentChatId, String(id || '')); },
+        loadCurrentChatId() { return safeGet(K.currentChatId, ''); },
       };
-      reader.readAsDataURL(file);
-    }
-    function clearBackground() {
-      localStorage.removeItem(STORAGE.bgImage);
-      bgLayer.style.backgroundImage = '';
-    }
+    })();
 
-    // Long-press on the BG button opens small menu (pick/clear)
-    let bgPressTimer = null;
-    bgPickButton.addEventListener('mousedown', () => {
-      bgPressTimer = setTimeout(() => {
-        const choice = window.prompt('Background: type "pick" to choose, "clear" to remove, or a number (0–0.8) to set dim.');
-        if (!choice) return;
-        if (choice.toLowerCase() === 'clear') { clearBackground(); }
-        else if (choice.toLowerCase() === 'pick') { bgUpload.click(); }
-        else {
-          const v = parseFloat(choice);
-          if (!isNaN(v)) {
-            const vv = Math.max(0, Math.min(0.8, v));
-            localStorage.setItem(STORAGE.bgDim, String(vv));
-            document.documentElement.style.setProperty('--dim-amount', String(vv));
+    // ================= State (single source of truth) =================
+    const State = (() => {
+      const state = {
+        isConnected: false,
+        currentModel: '',
+        serverUrl: Storage.getServerUrl() || '',
+        pendingImage: null,
+        chats: Storage.loadChats(),
+        currentChatId: Storage.loadCurrentChatId() || null,
+      };
+
+      const persist = () => { Storage.saveChats(state.chats); Storage.saveCurrentChatId(state.currentChatId); Storage.setServerUrl(state.serverUrl); };
+
+      const api = {
+        get currentChat() { return state.chats.find(c => c.id === state.currentChatId) || null; },
+        ensureChat() {
+          if (!api.currentChat) api.createChat();
+          return api.currentChat;
+        },
+        createChat(name) {
+          const chat = { id: Utils.uuid(), name: name || `Conversation ${state.chats.length + 1}`, messages: [] };
+          state.chats.push(chat); state.currentChatId = chat.id; persist(); Events.emit('state:chats', state.chats); Events.emit('state:currentChat', chat);
+          return chat;
+        },
+        deleteChat(id) {
+          state.chats = state.chats.filter(c => c.id !== id);
+          if (state.currentChatId === id) { state.currentChatId = state.chats[0]?.id || null; }
+          persist(); Events.emit('state:chats', state.chats); Events.emit('state:currentChat', api.currentChat);
+        },
+        renameCurrentChatIfDefault(snippet) {
+          const chat = api.currentChat; if (!chat) return;
+          if (/^Conversation\s\d+/.test(chat.name) || chat.name.startsWith('Conversation ')) {
+            chat.name = snippet ? `Conversation: ${snippet}...` : chat.name;
+            persist(); Events.emit('state:chats', state.chats);
           }
-        }
-      }, 500);
-    });
-    bgPickButton.addEventListener('mouseup', () => { clearTimeout(bgPressTimer); });
-    bgPickButton.addEventListener('mouseleave', () => { clearTimeout(bgPressTimer); });
-    bgPickButton.addEventListener('click', () => bgUpload.click());
-    bgUpload.addEventListener('change', () => {
-      const file = bgUpload.files && bgUpload.files[0];
-      if (file) setBackgroundFile(file);
-      bgUpload.value = '';
-    });
+        },
+        addMessage({ content, isUser, metrics = null, isImage = false, imageData = null, text = '' }) {
+          const chat = api.ensureChat();
+          chat.messages.push({ content, isUser, metrics, isImage, imageData, text });
+          persist(); Events.emit('chat:messageAdded', { chatId: chat.id, message: chat.messages[chat.messages.length - 1] });
+        },
+        setConnection({ connected, model }) { state.isConnected = connected; if (typeof model === 'string') state.currentModel = model; Events.emit('state:connection', { connected, model: state.currentModel }); persist(); },
+        setServerUrl(url) { state.serverUrl = url; persist(); Events.emit('state:serverUrl', url); },
+        setModel(model) { state.currentModel = model; Events.emit('state:model', model); persist(); },
+        setPendingImage(dataUrl) { state.pendingImage = dataUrl; Events.emit('state:pendingImage', dataUrl); },
+        selectChat(id) { state.currentChatId = id; persist(); Events.emit('state:currentChat', api.currentChat); },
+        get snapshot() { return JSON.parse(JSON.stringify(state)); },
+      };
+      return api;
+    })();
 
-    // ====== Markdown / copy buttons ======
-    function attachCopyButtons(container) {
-      container.querySelectorAll('pre').forEach(pre => {
-        if (!pre.querySelector('.copy-btn')) {
-          pre.style.position = 'relative';
-          const button = document.createElement('button');
-          button.className = 'copy-btn';
-          button.innerHTML = '<i class="fas fa-copy"></i> Copy';
-          button.addEventListener('click', () => {
-            const codeText = pre.querySelector('code').innerText;
-            navigator.clipboard.writeText(codeText).then(() => {
-              button.innerText = 'Copied!';
-              setTimeout(() => { button.innerHTML = '<i class="fas fa-copy"></i> Copy'; }, 1500);
-            }).catch(err => console.error('Failed to copy code: ', err));
-          });
-          pre.appendChild(button);
-        }
-      });
-    }
-
-    // ====== Chat rendering ======
-    function addMessage(content, isUser, metrics = null, store = true) {
-      const messageDiv = document.createElement('div');
-      messageDiv.classList.add('message', isUser ? 'user-message' : 'assistant-message');
-
-      const headerDiv = document.createElement('div');
-      headerDiv.classList.add('message-header');
-      headerDiv.textContent = isUser ? 'You' : 'Assistant';
-      messageDiv.appendChild(headerDiv);
-
-      if (!isUser && currentModel) {
-        const modelDiv = document.createElement('div');
-        modelDiv.classList.add('message-model');
-        modelDiv.textContent = currentModel;
-        messageDiv.appendChild(modelDiv);
+    // ================= Services: Background =================
+    const BackgroundService = (() => {
+      const bgLayer = document.getElementById('bg-layer');
+      function applyFromStorage() {
+        const dataUrl = Storage.getBgImage();
+        const dim = Storage.getBgDim();
+        if (dataUrl) { bgLayer.style.backgroundImage = `url('${dataUrl}')`; document.body.style.backgroundColor = 'transparent'; }
+        if (dim != null) document.documentElement.style.setProperty('--dim-amount', String(Utils.clamp(dim, 0, 0.8)));
       }
-
-      const contentDiv = document.createElement('div');
-      contentDiv.classList.add('message-content');
-      contentDiv.innerHTML = marked.parse(content);
-      messageDiv.appendChild(contentDiv);
-
-      if (metrics) {
-        const metricsDiv = document.createElement('div');
-        metricsDiv.classList.add('message-metrics');
-        metricsDiv.textContent = metrics;
-        messageDiv.appendChild(metricsDiv);
+      function setFile(file) {
+        if (!file || !file.type.startsWith('image/')) return;
+        const reader = new FileReader();
+        reader.onload = e => { const dataUrl = e.target.result; Storage.setBgImage(dataUrl); bgLayer.style.backgroundImage = `url('${dataUrl}')`; };
+        reader.readAsDataURL(file);
       }
+      function clear() { Storage.clearBgImage(); bgLayer.style.backgroundImage = ''; }
+      function setDim(v) { const vv = Utils.clamp(parseFloat(v) || 0, 0, 0.8); Storage.setBgDim(vv); document.documentElement.style.setProperty('--dim-amount', String(vv)); }
+      return { applyFromStorage, setFile, clear, setDim };
+    })();
 
-      chatContainer.appendChild(messageDiv);
-      chatContainer.scrollTop = chatContainer.scrollHeight;
-
-      messageDiv.querySelectorAll('pre code').forEach(block => hljs.highlightElement(block));
-      if (typeof MathJax !== 'undefined') {
-        MathJax.typesetPromise([messageDiv]).catch(err => console.error('MathJax typeset failed:', err));
+    // ================= Services: LM Studio API =================
+    const LMStudioAPI = (() => {
+      async function listModels(serverUrl) {
+        const res = await fetch(`${serverUrl}/v1/models`);
+        if (!res.ok) throw new Error('Failed to list models');
+        return res.json();
       }
-      attachCopyButtons(messageDiv);
-
-      if (store && currentChat) currentChat.messages.push({ content, isUser, metrics, isImage: false });
-    }
-
-    function addImageMessage(dataURL, promptText) {
-      addMessage(`<img src="${dataURL}" style="max-width:100%; border-radius: var(--border-radius);" />`, true);
-      const lastMsg = currentChat.messages[currentChat.messages.length - 1];
-      lastMsg.isImage = true; lastMsg.imageData = dataURL; lastMsg.text = promptText;
-    }
-
-    function createNewChat() {
-      const chatId = Date.now();
-      const newChat = { id: chatId, name: `Conversation ${chats.length + 1}`, messages: [] };
-      chats.push(newChat); currentChat = newChat; updateChatList(); chatContainer.innerHTML = '';
-    }
-    function updateChatList() {
-      chatList.innerHTML = '';
-      chats.forEach(chat => {
-        const li = document.createElement('li');
-        li.textContent = chat.name; li.dataset.chatId = chat.id;
-        if (currentChat && chat.id === currentChat.id) li.classList.add('active');
-        li.addEventListener('click', () => { if (currentChat && chat.id === currentChat.id) return; currentChat = chat; loadChat(chat); updateChatList(); });
-        li.addEventListener('contextmenu', (e) => { e.preventDefault(); showContextMenu(e.pageX, e.pageY, chat.id); });
-        chatList.appendChild(li);
-      });
-    }
-    function loadChat(chat) {
-      chatContainer.innerHTML = '';
-      chat.messages.forEach(message => addMessage(message.content, message.isUser, message.metrics, false));
-    }
-
-    function showContextMenu(x, y, chatId) {
-      contextMenu.style.left = x + 'px'; contextMenu.style.top = y + 'px';
-      contextMenu.style.display = 'block';
-      contextMenu.onclick = () => { deleteChat(chatId); hideContextMenu(); };
-    }
-    function hideContextMenu() { contextMenu.style.display = 'none'; }
-    document.addEventListener('click', () => { if (contextMenu.style.display === 'block') hideContextMenu(); });
-    function deleteChat(chatId) {
-      chats = chats.filter(c => c.id != chatId);
-      if (currentChat && currentChat.id == chatId) { currentChat = chats.length ? chats[0] : null; if (!currentChat) createNewChat(); else loadChat(currentChat); }
-      updateChatList();
-    }
-
-    // Eject current model before switching
-    async function ejectCurrentModel(oldModel) {
-      const serverUrl = serverUrlInput.value.trim();
-      try {
-        await fetch(`${serverUrl}/v1/model/eject`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ model: oldModel }) });
-      } catch (error) { console.error('Error ejecting model:', error); }
-    }
-
-    function buildConversationHistory() {
-      const systemPrompt = currentChat.messages.some(msg => msg.isImage)
-        ? 'You are an AI assistant that analyzes images.'
-        : 'You are an intelligent assistant. You always provide well-reasoned answers that are both correct and helpful.';
-      const history = [{ role: 'system', content: systemPrompt }];
-      currentChat.messages.forEach(msg => {
-        if (msg.isImage) {
-          history.push({ role: msg.isUser ? 'user' : 'assistant', content: [ { type: 'text', text: msg.text || "What's in this image?" }, { type: 'image_url', image_url: { url: msg.imageData } } ] });
-        } else {
-          history.push({ role: msg.isUser ? 'user' : 'assistant', content: msg.content });
-        }
-      });
-      return history;
-    }
-
-    modelSelect.addEventListener('change', async (e) => {
-      const newModel = e.target.value;
-      if (currentModel && currentModel !== newModel) {
-        modelSelect.disabled = true;
-        await ejectCurrentModel(currentModel);
+      async function eject(serverUrl, model) {
+        try {
+          await fetch(`${serverUrl}/v1/model/eject`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ model }) });
+        } catch (e) { console.warn('Eject error:', e); }
       }
-      currentModel = newModel;
-      modelSelect.disabled = false;
-    });
-
-    async function connectToServer() {
-      const serverUrl = serverUrlInput.value.trim();
-      if (!serverUrl) { updateConnectionStatus('Please enter a valid server address', false); return; }
-      try {
-        updateConnectionStatus('Connecting...', false);
-        const response = await fetch(`${serverUrl}/v1/models`, { method: 'GET', headers: { 'Content-Type': 'application/json' } });
-        if (!response.ok) throw new Error('Server response was not ok');
-        const data = await response.json();
-        if (data && data.data && data.data.length > 0) {
-          modelSelect.innerHTML = '';
-          data.data.forEach(model => {
-            const option = document.createElement('option');
-            option.value = model.id; option.textContent = model.id; modelSelect.appendChild(option);
-          });
-          modelSelect.disabled = false; currentModel = modelSelect.value; isConnected = true;
-          updateConnectionStatus('Connected', true); userInput.disabled = false; sendButton.disabled = false;
-          if (!currentChat) createNewChat();
-          addMessage('Connected to LM Studio server. You can start chatting now!', false, null, false);
-          saveServerUrl(serverUrl);
-        } else { throw new Error('No models available'); }
-      } catch (error) {
-        console.error('Error:', error);
-        updateConnectionStatus('Failed to connect', false);
-        addMessage('Error: Unable to connect to the LM Studio server. Please check the address and try again.', false);
-      }
-    }
-
-    function updateConnectionStatus(message, connected) {
-      connectionStatus.textContent = message;
-      connectionStatus.style.color = connected ? 'var(--accent-color)' : '#f44336';
-      connectButton.innerHTML = connected ? '<i class="fas fa-link"></i> Disconnect' : '<i class="fas fa-plug"></i> Connect';
-      serverUrlInput.disabled = connected; userInput.disabled = !connected; sendButton.disabled = !connected;
-    }
-
-    async function sendMessage() {
-      let message = userInput.value.trim();
-      if (!message && !pendingImage) return;
-
-      if (pendingImage) {
-        let promptText = message || "What's in this image?";
-        addImageMessage(pendingImage, promptText);
-        pendingImage = null; imagePreview.style.display = 'none'; userInput.value = '';
-      } else { addMessage(message, true); }
-
-      const conversationHistory = buildConversationHistory();
-
-      // Streaming shell
-      const assistantMessageElement = document.createElement('div');
-      assistantMessageElement.classList.add('message', 'assistant-message');
-      const headerDiv = document.createElement('div'); headerDiv.classList.add('message-header'); headerDiv.textContent = 'Assistant';
-      assistantMessageElement.appendChild(headerDiv);
-      if (currentModel) { const modelDiv = document.createElement('div'); modelDiv.classList.add('message-model'); modelDiv.textContent = currentModel; assistantMessageElement.appendChild(modelDiv); }
-      const assistantContentDiv = document.createElement('div'); assistantContentDiv.classList.add('message-content'); assistantMessageElement.appendChild(assistantContentDiv);
-      chatContainer.appendChild(assistantMessageElement); chatContainer.scrollTop = chatContainer.scrollHeight;
-
-      userInput.value = ''; userInput.disabled = true; sendButton.disabled = true;
-
-      const serverUrl = serverUrlInput.value.trim();
-      let accumulatedText = '';
-      try {
-        const response = await fetch(`${serverUrl}/v1/chat/completions`, {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ model: currentModel, messages: conversationHistory, temperature: 0.7, max_tokens: -1, stream: true })
-        });
-        if (!response.ok) throw new Error('Server response was not ok');
-        const reader = response.body.getReader();
-        const decoder = new TextDecoder();
-        let done = false;
-        while (!done) {
-          const { value, done: doneReading } = await reader.read(); done = doneReading;
-          if (value) {
-            const chunk = decoder.decode(value, { stream: true });
-            const lines = chunk.split('\n').filter(line => line.trim() !== '');
-            for (const line of lines) {
-              if (line.startsWith('data:')) {
-                const dataStr = line.slice(5).trim();
-                if (dataStr === '[DONE]') { done = true; break; }
-                try {
-                  const parsed = JSON.parse(dataStr);
-                  const delta = parsed.choices[0].delta;
-                  if (delta && delta.content) {
-                    accumulatedText += delta.content;
-                    assistantContentDiv.innerHTML = marked.parse(accumulatedText);
-                    assistantMessageElement.querySelectorAll('pre code').forEach(block => hljs.highlightElement(block));
-                    attachCopyButtons(assistantMessageElement);
-                    if (typeof MathJax !== 'undefined') { MathJax.typesetPromise([assistantMessageElement]).catch(err => console.error(err)); }
-                  }
-                } catch (err) { console.error('Error parsing stream chunk', err); }
-              } else if (line.startsWith('event:')) {
-                const eventType = line.slice(6).trim();
-                if (eventType === 'error') { addMessage('Error: Received error event from server', false); done = true; break; }
-              }
+      async function* streamChat({ serverUrl, model, messages, temperature = 0.7, max_tokens = -1 }) {
+        const res = await fetch(`${serverUrl}/v1/chat/completions`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ model, messages, temperature, max_tokens, stream: true }) });
+        if (!res.ok || !res.body) throw new Error('Streaming failed');
+        const reader = res.body.getReader(); const decoder = new TextDecoder();
+        while (true) {
+          const { value, done } = await reader.read(); if (done) break;
+          const chunk = decoder.decode(value, { stream: true });
+          const lines = chunk.split('\n').filter(line => line.trim() !== '');
+          for (const line of lines) {
+            if (line.startsWith('data:')) {
+              const dataStr = line.slice(5).trim();
+              if (dataStr === '[DONE]') return;
+              try { const parsed = JSON.parse(dataStr); const delta = parsed.choices?.[0]?.delta?.content; if (delta) yield delta; } catch (e) { console.warn('parse', e); }
             }
           }
         }
-        if (currentChat) {
-          currentChat.messages.push({ content: accumulatedText, isUser: false, isImage: false });
-          if (currentChat.name.startsWith('Conversation')) {
-            const snippet = accumulatedText.split(' ').slice(0, 7).join(' ');
-            currentChat.name = snippet ? `Conversation: ${snippet}...` : currentChat.name;
-            updateChatList();
+      }
+      return { listModels, eject, streamChat };
+    })();
+
+    // ================= UI: Header =================
+    const Header = (() => {
+      const els = {
+        serverUrl: document.getElementById('server-url'),
+        modelSelect: document.getElementById('model-select'),
+        bgPickButton: document.getElementById('bg-pick-button'),
+        bgUpload: document.getElementById('bg-upload'),
+        connectButton: document.getElementById('connect-button'),
+        status: document.getElementById('connection-status'),
+      };
+
+      let longPressTimer = null;
+
+      function setStatus(text, ok) {
+        els.status.textContent = text;
+        els.status.style.color = ok ? 'var(--accent-color)' : '#f44336';
+        els.connectButton.innerHTML = ok ? '<i class="fas fa-link"></i> Disconnect' : '<i class="fas fa-plug"></i> Connect';
+        els.serverUrl.disabled = ok; Events.emit('ui:connectionControls', { enabled: ok });
+      }
+
+      function populateModels(data) {
+        const list = data?.data || [];
+        els.modelSelect.innerHTML = '';
+        for (const m of list) { const opt = document.createElement('option'); opt.value = m.id; opt.textContent = m.id; els.modelSelect.appendChild(opt); }
+        els.modelSelect.disabled = list.length === 0;
+        State.setModel(els.modelSelect.value || '');
+      }
+
+      function attach() {
+        // Restore URL
+        const saved = State.snapshot.serverUrl || Storage.getServerUrl(); if (saved) els.serverUrl.value = saved;
+        els.serverUrl.addEventListener('input', Utils.debounce(() => State.setServerUrl(els.serverUrl.value.trim()), 200));
+
+        // Background controls
+        els.bgPickButton.addEventListener('mousedown', () => {
+          longPressTimer = setTimeout(() => {
+            const choice = window.prompt('Background: type "pick" to choose, "clear" to remove, or a number (0–0.8) to set dim.');
+            if (!choice) return;
+            if (choice.toLowerCase() === 'clear') BackgroundService.clear();
+            else if (choice.toLowerCase() === 'pick') els.bgUpload.click();
+            else { const v = parseFloat(choice); if (!isNaN(v)) BackgroundService.setDim(v); }
+          }, 500);
+        });
+        ['mouseup','mouseleave'].forEach(ev => els.bgPickButton.addEventListener(ev, () => clearTimeout(longPressTimer)));
+        els.bgPickButton.addEventListener('click', () => els.bgUpload.click());
+        els.bgUpload.addEventListener('change', () => { const f = els.bgUpload.files?.[0]; if (f) BackgroundService.setFile(f); els.bgUpload.value = ''; });
+
+        // Connect / Disconnect
+        els.connectButton.addEventListener('click', async () => {
+          const { isConnected } = State.snapshot;
+          if (isConnected) {
+            State.setConnection({ connected: false }); setStatus('Disconnected', false);
+            Events.emit('network:disconnected');
+            return;
+          }
+          const serverUrl = els.serverUrl.value.trim();
+          if (!serverUrl) { setStatus('Please enter a valid server address', false); return; }
+          try {
+            setStatus('Connecting...', false);
+            const data = await LMStudioAPI.listModels(serverUrl);
+            State.setServerUrl(serverUrl);
+            populateModels(data);
+            State.setConnection({ connected: true }); setStatus('Connected', true);
+            Events.emit('network:connected', { serverUrl });
+          } catch (e) {
+            console.error(e); setStatus('Failed to connect', false);
+            Events.emit('toast', { type: 'error', text: 'Unable to connect to LM Studio server' });
+          }
+        });
+
+        // Model switching
+        els.modelSelect.addEventListener('change', async (e) => {
+          const newModel = e.target.value; const { serverUrl, currentModel } = State.snapshot;
+          if (currentModel && currentModel !== newModel) await LMStudioAPI.eject(serverUrl, currentModel);
+          State.setModel(newModel);
+        });
+
+        // React to connection state changes from elsewhere
+        Events.on('state:connection', ({ connected }) => { setStatus(connected ? 'Connected' : 'Disconnected', connected); });
+      }
+
+      return { attach, setStatus };
+    })();
+
+    // ================= UI: Sidebar (chat list) =================
+    const Sidebar = (() => {
+      const els = { list: document.getElementById('chat-list'), newChat: document.getElementById('new-chat-button'), toggle: document.getElementById('toggle-sidebar'), sidebar: document.getElementById('chat-sidebar'), contextMenu: document.getElementById('context-menu') };
+
+      function render(chats, currentId) {
+        els.list.innerHTML = '';
+        for (const c of chats) {
+          const li = document.createElement('li');
+          li.textContent = c.name; li.dataset.chatId = c.id; if (c.id === currentId) li.classList.add('active');
+          li.addEventListener('click', () => State.selectChat(c.id));
+          li.addEventListener('contextmenu', (e) => { e.preventDefault(); showContextMenu(e.pageX, e.pageY, c.id); });
+          els.list.appendChild(li);
+        }
+      }
+
+      function showContextMenu(x, y, chatId) { const m = els.contextMenu; m.style.left = x + 'px'; m.style.top = y + 'px'; m.style.display = 'block'; m.onclick = () => { State.deleteChat(chatId); hideContextMenu(); }; }
+      function hideContextMenu() { els.contextMenu.style.display = 'none'; }
+
+      function bind() {
+        els.newChat.addEventListener('click', () => State.createChat());
+        els.toggle.addEventListener('click', () => els.sidebar.classList.toggle('collapsed'));
+        document.addEventListener('click', () => { if (els.contextMenu.style.display === 'block') hideContextMenu(); });
+
+        // react to state
+        const refresh = () => render(State.snapshot.chats, State.snapshot.currentChatId);
+        Events.on('state:chats', refresh); Events.on('state:currentChat', refresh);
+        refresh();
+      }
+      return { bind };
+    })();
+
+    // ================= UI: ChatView =================
+    const ChatView = (() => {
+      const container = document.getElementById('chat-container');
+
+      function messageHtml({ isUser, content }, model) {
+        const wrapper = document.createElement('div');
+        wrapper.classList.add('message', isUser ? 'user-message' : 'assistant-message');
+        const header = document.createElement('div'); header.className = 'message-header'; header.textContent = isUser ? 'You' : 'Assistant'; wrapper.appendChild(header);
+        if (!isUser && model) { const m = document.createElement('div'); m.className = 'message-model'; m.textContent = model; wrapper.appendChild(m); }
+        const body = document.createElement('div'); body.className = 'message-content'; body.innerHTML = marked.parse(content || ''); wrapper.appendChild(body);
+        return { wrapper, body };
+      }
+
+      function renderChat(chat) {
+        container.innerHTML = '';
+        if (!chat) return;
+        for (const msg of chat.messages) {
+          const { wrapper, body } = messageHtml(msg, !msg.isUser ? State.snapshot.currentModel : '');
+          container.appendChild(wrapper);
+          Utils.highlight(wrapper); Utils.attachCopyButtons(wrapper); Utils.typeset(wrapper);
+        }
+        container.scrollTop = container.scrollHeight;
+      }
+
+      function addStreamingAssistantMessage() {
+        const { wrapper, body } = messageHtml({ isUser: false, content: '' }, State.snapshot.currentModel);
+        container.appendChild(wrapper); container.scrollTop = container.scrollHeight;
+        return body; // return the body element to stream into
+      }
+
+      function updateStreaming(bodyEl, text) {
+        bodyEl.innerHTML = marked.parse(text);
+        Utils.highlight(bodyEl.parentElement); Utils.attachCopyButtons(bodyEl.parentElement); Utils.typeset(bodyEl.parentElement);
+        container.scrollTop = container.scrollHeight;
+      }
+
+      // react to state
+      function bind() { Events.on('state:currentChat', renderChat); Events.on('chat:messageAdded', () => renderChat(State.snapshot.currentChat)); renderChat(State.snapshot.currentChat); }
+      return { bind, addStreamingAssistantMessage, updateStreaming };
+    })();
+
+    // ================= UI: InputBar =================
+    const InputBar = (() => {
+      const els = { dropZone: document.getElementById('input-container'), uploadBtn: document.getElementById('upload-button'), file: document.getElementById('image-upload'), preview: document.getElementById('image-preview'), input: document.getElementById('user-input'), send: document.getElementById('send-button') };
+
+      function setEnabled(yes) { els.input.disabled = !yes; els.send.disabled = !yes; }
+      function showPendingImage(dataURL) { els.preview.innerHTML = `<img src="${dataURL}" style="max-width:100%; border-radius: var(--border-radius);" />`; els.preview.style.display = 'block'; }
+      function clearPendingPreview() { els.preview.innerHTML = ''; els.preview.style.display = 'none'; }
+
+      async function handleImageFile(file) {
+        if (!file || !file.type.startsWith('image/')) return;
+        const dataURL = await new Promise((resolve, reject) => { const r = new FileReader(); r.onload = e => resolve(e.target.result); r.onerror = reject; r.readAsDataURL(file); });
+        State.setPendingImage(dataURL); showPendingImage(dataURL); els.input.focus();
+      }
+
+      async function handleTransferItems(dt) {
+        if (!dt) return;
+        if (dt.files && dt.files.length) { for (const f of dt.files) { if (f.type?.startsWith('image/')) { await handleImageFile(f); return; } } }
+        if (dt.items && dt.items.length) { for (const it of dt.items) { if (it.kind === 'file' && it.type.startsWith('image/')) { const f = it.getAsFile(); if (f) { await handleImageFile(f); return; } } } }
+        const url = dt.getData && (dt.getData('text/uri-list') || dt.getData('text/plain'));
+        if (url && /^https?:\/\//i.test(url) && /\.(png|jpe?g|gif|webp|bmp|svg)(\?|#|$)/i.test(url)) { State.setPendingImage(url); showPendingImage(url); els.input.focus(); }
+      }
+
+      function bind() {
+        // Buttons & file input
+        els.uploadBtn.addEventListener('click', () => els.file.click());
+        els.file.addEventListener('change', () => { const f = els.file.files?.[0]; if (f) handleImageFile(f); els.file.value = ''; });
+
+        // Paste & DnD
+        els.input.addEventListener('paste', async (e) => { const dt = e.clipboardData; if (!dt) return; const hasImg = Array.from(dt.items || []).some(i => i.kind === 'file' && i.type.startsWith('image/')); if (hasImg) { e.preventDefault(); await handleTransferItems(dt); } });
+        document.addEventListener('paste', async (e) => { if (document.activeElement !== els.input) { const dt = e.clipboardData; if (!dt) return; const hasImg = Array.from(dt.items || []).some(i => i.kind === 'file' && i.type.startsWith('image/')); if (hasImg) { e.preventDefault(); await handleTransferItems(dt); } } });
+        ;['dragenter','dragover','dragleave','drop'].forEach(evt => { els.dropZone.addEventListener(evt, e => { e.preventDefault(); e.stopPropagation(); }); });
+        els.dropZone.addEventListener('dragenter', () => els.dropZone.classList.add('drop-hover'));
+        els.dropZone.addEventListener('dragover',  () => els.dropZone.classList.add('drop-hover'));
+        els.dropZone.addEventListener('dragleave', () => els.dropZone.classList.remove('drop-hover'));
+        els.dropZone.addEventListener('drop', async (e) => { els.dropZone.classList.remove('drop-hover'); const dt = e.dataTransfer; await handleTransferItems(dt); });
+
+        // Enable/disable with connection
+        Events.on('ui:connectionControls', ({ enabled }) => setEnabled(enabled));
+        setEnabled(false);
+      }
+
+      function getMessageAndMaybeImage() {
+        const text = els.input.value.trim();
+        const img = State.snapshot.pendingImage;
+        if (!text && !img) return null;
+        if (img) { State.addMessage({ content: `<img src="${img}" style="max-width:100%; border-radius: var(--border-radius);" />`, isUser: true }); State.addMessage({ content: text || "What's in this image?", isUser: true, isImage: true, imageData: img, text: text || '' }); State.setPendingImage(null); clearPendingPreview(); els.input.value = ''; return { kind: 'image', text: text || "What's in this image?", data: img }; }
+        else { State.addMessage({ content: text, isUser: true }); els.input.value = ''; return { kind: 'text', text }; }
+      }
+
+      function focus() { els.input.focus(); }
+
+      return { bind, getMessageAndMaybeImage, focus };
+    })();
+
+    // ================= App Controller =================
+    const AppController = (() => {
+      async function buildConversationHistory() {
+        const chat = State.ensureChat();
+        const hasImage = chat.messages.some(m => m.isImage);
+        const systemPrompt = hasImage ? 'You are an AI assistant that analyzes images.' : 'You are an intelligent assistant. You always provide well-reasoned answers that are both correct and helpful.';
+        const history = [{ role: 'system', content: systemPrompt }];
+        for (const msg of chat.messages) {
+          if (msg.isImage && msg.imageData) {
+            history.push({ role: msg.isUser ? 'user' : 'assistant', content: [ { type: 'text', text: msg.text || "What's in this image?" }, { type: 'image_url', image_url: { url: msg.imageData } } ] });
+          } else {
+            history.push({ role: msg.isUser ? 'user' : 'assistant', content: msg.content });
           }
         }
-      } catch (error) {
-        console.error('Error:', error);
-        addMessage('Error: Unable to get a response from the server. Please try again.', false);
-        isConnected = false; updateConnectionStatus('Disconnected', false);
-      } finally {
-        userInput.disabled = false; sendButton.disabled = false; userInput.focus();
+        return history;
       }
-    }
 
-    // Paste & Drag-and-Drop for user image
-    async function handleImageFile(file) {
-      if (!file || !file.type.startsWith('image/')) return;
-      const dataURL = await new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = e => resolve(e.target.result);
-        reader.onerror = reject; reader.readAsDataURL(file);
-      });
-      pendingImage = dataURL;
-      imagePreview.innerHTML = `<img src="${pendingImage}" style="max-width:100%; border-radius: var(--border-radius);" />`;
-      imagePreview.style.display = 'block'; userInput.focus();
-    }
-    async function handleTransferItems(dt) {
-      if (!dt) return;
-      if (dt.files && dt.files.length) {
-        for (const file of dt.files) { if (file.type && file.type.startsWith('image/')) { await handleImageFile(file); return; } }
+      function bindSend() {
+        const sendBtn = document.getElementById('send-button');
+        const input = document.getElementById('user-input');
+        sendBtn.addEventListener('click', onSend);
+        input.addEventListener('keypress', (e) => { if (e.key === 'Enter') onSend(); });
       }
-      if (dt.items && dt.items.length) {
-        for (const item of dt.items) { if (item.kind === 'file' && item.type.startsWith('image/')) { const file = item.getAsFile(); if (file) { await handleImageFile(file); return; } } }
+
+      async function onSend() {
+        const req = InputBar.getMessageAndMaybeImage();
+        if (!req) return;
+
+        // Prepare streaming shell
+        const streamBody = ChatView.addStreamingAssistantMessage();
+        let acc = '';
+
+        const { serverUrl, currentModel } = State.snapshot;
+        const messages = await buildConversationHistory();
+
+        try {
+          for await (const delta of LMStudioAPI.streamChat({ serverUrl, model: currentModel, messages })) {
+            acc += delta; ChatView.updateStreaming(streamBody, acc);
+          }
+          State.addMessage({ content: acc, isUser: false });
+          // rename conversation if default
+          State.renameCurrentChatIfDefault(acc.split(' ').slice(0, 7).join(' '));
+        } catch (e) {
+          console.error(e);
+          State.addMessage({ content: 'Error: Unable to get a response from the server. Please try again.', isUser: false });
+          Events.emit('state:connection', { connected: false, model: State.snapshot.currentModel });
+        } finally {
+          InputBar.focus();
+        }
       }
-      const url = dt.getData && (dt.getData('text/uri-list') || dt.getData('text/plain'));
-      if (url && /^https?:\/\//i.test(url) && /\.(png|jpe?g|gif|webp|bmp|svg)(\?|#|$)/i.test(url)) {
-        pendingImage = url; imagePreview.innerHTML = `<img src="${pendingImage}" style="max-width:100%; border-radius: var(--border-radius);" />`;
-        imagePreview.style.display = 'block'; userInput.focus();
+
+      function init() {
+        // Services
+        BackgroundService.applyFromStorage();
+
+        // UI components
+        Header.attach(); Sidebar.bind(); ChatView.bind(); InputBar.bind();
+
+        // Initial chat
+        if (!State.snapshot.currentChatId || !State.snapshot.chats.length) State.createChat();
+
+        // Initial focus
+        const urlInput = document.getElementById('server-url'); urlInput.focus();
+
+        // Bind send and connection events
+        bindSend();
       }
-    }
 
-    userInput.addEventListener('paste', async (e) => {
-      const dt = e.clipboardData; if (!dt) return;
-      const hasImage = Array.from(dt.items || []).some(i => i.kind === 'file' && i.type.startsWith('image/'));
-      if (hasImage) { e.preventDefault(); await handleTransferItems(dt); }
-    });
-    document.addEventListener('paste', async (e) => {
-      if (document.activeElement !== userInput) {
-        const dt = e.clipboardData; if (!dt) return;
-        const hasImage = Array.from(dt.items || []).some(i => i.kind === 'file' && i.type.startsWith('image/'));
-        if (hasImage) { e.preventDefault(); await handleTransferItems(dt); }
-      }
-    });
-
-    ;['dragenter','dragover','dragleave','drop'].forEach(evt => {
-      dropZone.addEventListener(evt, e => { e.preventDefault(); e.stopPropagation(); });
-    });
-    dropZone.addEventListener('dragenter', () => dropZone.classList.add('drop-hover'));
-    dropZone.addEventListener('dragover',  () => dropZone.classList.add('drop-hover'));
-    dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drop-hover'));
-    dropZone.addEventListener('drop', async (e) => { dropZone.classList.remove('drop-hover'); const dt = e.dataTransfer; await handleTransferItems(dt); });
-
-    // Buttons
-    uploadButton.addEventListener('click', () => imageUpload.click());
-    imageUpload.addEventListener('change', () => { const file = imageUpload.files[0]; if (!file) return; const reader = new FileReader(); reader.onload = (e) => { pendingImage = e.target.result; imagePreview.innerHTML = `<img src="${pendingImage}" style="max-width:100%; border-radius: var(--border-radius);" />`; imagePreview.style.display = 'block'; }; reader.readAsDataURL(file); imageUpload.value = ''; });
-
-    connectButton.addEventListener('click', () => {
-      if (isConnected) {
-        isConnected = false; updateConnectionStatus('Disconnected', false);
-        userInput.disabled = true; sendButton.disabled = true; addMessage('Disconnected from LM Studio server.', false);
-        currentModel = ''; modelSelect.disabled = true; saveServerUrl(serverUrlInput.value.trim());
-      } else { connectToServer(); }
-    });
-
-    userInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') sendMessage(); });
-    sendButton.addEventListener('click', sendMessage);
-    newChatButton?.addEventListener('click', () => createNewChat());
-    toggleSidebarButton?.addEventListener('click', () => chatSidebar.classList.toggle('collapsed'));
-
-    // Persist URL as user types (debounced)
-    let saveUrlTimer = null;
-    serverUrlInput.addEventListener('input', () => { clearTimeout(saveUrlTimer); saveUrlTimer = setTimeout(() => saveServerUrl(serverUrlInput.value.trim()), 250); });
-
-    // Init
-    (function init() {
-      // restore URL
-      const savedUrl = loadServerUrl(); if (savedUrl) serverUrlInput.value = savedUrl;
-      // restore background
-      applyBackgroundFromStorage();
-      // start a chat by default
-      createNewChat();
-      // focus URL field first
-      serverUrlInput.focus();
+      return { init };
     })();
+
+    // ================= Boot =================
+    AppController.init();
   </script>
 </body>
 </html>
