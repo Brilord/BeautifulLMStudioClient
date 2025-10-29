@@ -255,6 +255,23 @@
   #user-input::placeholder { color: color-mix(in oklab, var(--muted-text) 70%, transparent); }
   #image-preview { display: none; max-width: 54px; }
 
+  /* Autocomplete */
+  #autocomplete {
+    position: absolute; bottom: calc(100% + 8px); left: 86px; right: 86px;
+    max-height: 40vh; overflow: auto; padding: 6px; border-radius: 12px;
+    background: color-mix(in oklab, var(--input-background) 28%, transparent);
+    border: 1px solid var(--border-color);
+    box-shadow: 0 10px 28px rgba(0,0,0,0.25);
+    display: none; z-index: 50;
+  }
+  .ac-item {
+    padding: 8px 10px; border-radius: 10px; cursor: pointer; display: flex; gap: 8px; align-items: center;
+    color: var(--text-color); font-size: 0.95rem;
+  }
+  .ac-item:hover, .ac-item.active { background: color-mix(in oklab, var(--input-background) 40%, transparent); }
+  .ac-k { opacity: .75; font-weight: 600; min-width: 72px; }
+  .ac-d { opacity: .85; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
   /* MOBILE */
   @media (max-width: 768px) {
     #main-content { grid-template-columns: 1fr; }
@@ -348,6 +365,186 @@
     background: color-mix(in oklab, #0b0f14 85%, var(--background-color));
     color: #d7dde4; padding:.5rem; overflow:auto; white-space:pre-wrap;
   }
+
+  /* ================= De-blue + Visibility + Press FX ================= */
+  /* Shift accent away from blue to neon-mint for a futuristic feel */
+  :root, :root[data-theme="light"] { --accent-color: #00ffd1; }
+  :root[data-theme="dark"]  { --accent-color: #00ffd1; }
+
+  /* Ensure dialogue readability over backgrounds */
+  .assistant-message { background: color-mix(in oklab, var(--assistant-message-color) 42%, transparent) !important; }
+  .user-message { background: color-mix(in oklab, var(--user-message-color) 48%, transparent) !important; }
+  .message { border: 1px solid color-mix(in oklab, var(--text-color) 18%, transparent) !important; }
+  .message-content { text-shadow: 0 0 2px rgba(0,0,0,0.45), 0 1px 2px rgba(0,0,0,0.35); }
+
+  /* Remove blue button fills: use neutral translucent surfaces */
+  .icon-btn, #new-chat-button, #connect-button {
+    background: color-mix(in oklab, var(--input-background) 22%, transparent) !important;
+    border: 1px solid var(--border-color) !important;
+    color: var(--text-color) !important;
+    position: relative; overflow: hidden;
+    box-shadow: 0 6px 16px rgba(0,0,0,0.18);
+  }
+  .icon-btn:hover, #new-chat-button:hover, #connect-button:hover {
+    background: color-mix(in oklab, var(--input-background) 30%, transparent) !important;
+  }
+  /* Remove prior connect gradient/breathing */
+  #connect-button { animation: none !important; }
+
+  /* Active chat no longer bright blue; subtle highlight */
+  #chat-list li.active {
+    background: color-mix(in oklab, var(--input-background) 24%, transparent) !important;
+    color: var(--text-color) !important;
+    border-color: color-mix(in oklab, var(--text-color) 25%, transparent) !important;
+    box-shadow: 0 0 0 1px color-mix(in oklab, var(--accent-color) 35%, transparent), 0 10px 24px rgba(0,0,0,0.22);
+  }
+
+  /* Futuristic press effects: pulse ring + ripple */
+  @keyframes neonPulse { from { box-shadow: 0 0 0 0 color-mix(in oklab, var(--accent-color) 55%, transparent); } to { box-shadow: 0 0 0 14px color-mix(in oklab, var(--accent-color) 0%, transparent); } }
+  @keyframes ripple { to { transform: translate(-50%, -50%) scale(8); opacity: 0; } }
+  .icon-btn.is-pressed, #new-chat-button.is-pressed, #connect-button.is-pressed { animation: neonPulse 480ms ease-out; }
+  .icon-btn.is-pressed::after, #new-chat-button.is-pressed::after, #connect-button.is-pressed::after {
+    content: ''; position: absolute; left: 50%; top: 50%; width: 16px; height: 16px; border-radius: 999px;
+    transform: translate(-50%, -50%) scale(0); background: color-mix(in oklab, var(--accent-color) 45%, transparent);
+    animation: ripple 460ms ease-out; pointer-events: none;
+  }
+
+  /* ======================= High Contrast Text ======================= */
+  /* Stronger bubble tint to support clear text over photos */
+  .assistant-message { background: color-mix(in oklab, var(--assistant-message-color) 55%, transparent) !important; }
+  .user-message { background: color-mix(in oklab, var(--user-message-color) 60%, transparent) !important; }
+  /* High-contrast text with multi-direction soft outline */
+  .message-header,
+  .message-content,
+  .message-model,
+  .message-metrics {
+    color: var(--text-color);
+    text-shadow:
+      0 0 2px rgba(0,0,0,0.65),
+      0 1px 2px rgba(0,0,0,0.55),
+      0 -1px 2px rgba(0,0,0,0.35),
+      1px 0 2px rgba(0,0,0,0.45),
+      -1px 0 2px rgba(0,0,0,0.45);
+  }
+  /* Links readable on any background */
+  .message-content a { color: var(--accent-color); text-decoration: underline; text-underline-offset: 2px; text-shadow: 0 0 2px rgba(0,0,0,0.6); }
+
+  /* =============================================================
+     Futuristic UI Enhancements — glass, motion, and feedback
+     Appends non-destructive overrides to keep transparency vibes
+     ============================================================= */
+
+  /* Glassy surfaces */
+  #server-url-container,
+  #chat-sidebar,
+  #input-container,
+  #chat-container {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+
+  /* Header: adopt clean flex layout with center grow */
+  #server-url-container {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 0.75rem; padding: 0.6rem calc(0.75rem + env(safe-area-inset-right)) 0.6rem calc(0.75rem + env(safe-area-inset-left));
+    box-shadow: 0 4px 12px rgba(0,0,0,0.10);
+    position: sticky; top: 0; z-index: 10;
+  }
+  .header-left, .header-center, .header-right { display: flex; align-items: center; gap: 0.5rem; }
+  .header-center { flex: 1; min-width: 0; }
+  .header-right { gap: 0.45rem; }
+  #server-url { flex: 1; padding: 0.6rem 0.75rem; }
+  #model-select { width: min(38vw, 220px); }
+
+  /* Header banner: overlay centered and proper caret */
+  #header-banner { position: absolute; left: 50%; transform: translateX(-50%); color: var(--muted-text); }
+  #header-banner.typing::after { content: '|'; display: inline-block; margin-left: 2px; animation: blink 1s steps(2, start) infinite; }
+
+  /* Buttons: soften base, add sheen and hover lift */
+  #server-url-container .icon-btn {
+    background: color-mix(in oklab, var(--input-background) 60%, transparent);
+    border: 1px solid var(--border-color);
+    color: var(--text-color);
+    overflow: hidden; position: relative;
+  }
+  .icon-btn::before {
+    content: '';
+    position: absolute; inset: -40% auto -40% -60%; width: 40%;
+    background: linear-gradient(130deg, #fff0 0%, #fff3 45%, #fff0 100%);
+    transform: skewX(-20deg) translateX(-20%);
+    transition: transform 0.6s ease;
+    pointer-events: none;
+  }
+  .icon-btn:hover::before { transform: skewX(-20deg) translateX(220%); }
+  .icon-btn:hover { transform: translateY(-1px); }
+
+  /* Connect button: subtle breathing to invite interaction */
+  #connect-button {
+    background: linear-gradient(135deg, var(--button-color), color-mix(in oklab, var(--accent-color) 55%, var(--button-color)));
+    box-shadow: 0 6px 18px rgba(0,0,0,0.25);
+    animation: breathe 3.8s ease-in-out infinite;
+  }
+  #connect-button:hover { box-shadow: 0 10px 24px rgba(0,0,0,0.32); }
+
+  /* Inputs: crisp focus ring */
+  #server-url:focus, #model-select:focus, #user-input:focus {
+    outline: none;
+    border-color: transparent;
+    box-shadow: 0 0 0 2px color-mix(in oklab, var(--accent-color) 65%, transparent), 0 6px 18px rgba(0,0,0,0.25);
+  }
+
+  /* Sidebar list: lift on hover */
+  #chat-list li {
+    transition: background 0.25s ease, transform 0.15s ease, box-shadow 0.25s ease;
+  }
+  #chat-list li:hover { transform: translateY(-1px); box-shadow: 0 8px 20px rgba(0,0,0,0.18); }
+  #chat-list li:active { transform: translateY(0); }
+
+  /* Messages: gentle hover and better readability */
+  .message { transition: transform 0.2s ease, box-shadow 0.25s ease, background 0.25s ease; }
+  .message:hover { transform: translateY(-2px); box-shadow: 0 8px 28px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.06); }
+
+  /* Input bar: glass with subtle border glow */
+  #input-container { box-shadow: 0 10px 28px rgba(0,0,0,0.22); border: 1px solid color-mix(in oklab, var(--text-color) 12%, transparent); }
+
+  /* Connection status: smoother appearance */
+  #connection-status { backdrop-filter: none !important; -webkit-backdrop-filter: none !important; }
+
+  /* Animations */
+  @keyframes breathe { 0%, 100% { transform: translateY(0); filter: brightness(1); } 50% { transform: translateY(-1px); filter: brightness(1.06); } }
+
+  @media (max-width: 768px) {
+    .header-center { gap: 0.4rem; }
+  }
+
+  /* -------------------------------------------------------------
+     Transparent UI — keep everything see-through, readable tints
+     Applies to header, chat storage (sidebar), lists, chat area
+     ------------------------------------------------------------- */
+  /* Header container */
+  #server-url-container { background: color-mix(in oklab, var(--input-background) 18%, transparent); }
+  /* Chat storage bar (sidebar) */
+  #chat-sidebar { background: color-mix(in oklab, var(--input-background) 14%, transparent); }
+  /* Chat list items */
+  #chat-list li { background: color-mix(in oklab, var(--input-background) 16%, transparent); }
+  #chat-list li:hover { background: color-mix(in oklab, var(--input-background) 26%, transparent); }
+  #chat-list li.active { background: color-mix(in oklab, var(--button-color) 35%, transparent); }
+  /* Chat container surface */
+  #chat-container { background: color-mix(in oklab, var(--surface-tint) 14%, transparent); }
+  /* Messages */
+  .message { background: color-mix(in oklab, var(--assistant-message-color) 24%, transparent); }
+  .user-message { background: color-mix(in oklab, var(--user-message-color) 28%, transparent); }
+  /* Input bar */
+  #input-container { background: color-mix(in oklab, var(--input-background) 18%, transparent); }
+  /* Status */
+  #connection-status { background: color-mix(in oklab, var(--input-background) 14%, transparent); }
+  /* Header icon buttons */
+  #server-url-container .icon-btn { background: color-mix(in oklab, var(--input-background) 18%, transparent); }
+
+  /* Mobile sidebar override: keep drawer transparent too */
+  @media (max-width: 768px) {
+    #chat-sidebar { background: color-mix(in oklab, var(--input-background) 16%, transparent); }
+  }
   </style>
 </head>
 <body>
@@ -358,25 +555,23 @@
   <div id="app">
     <!-- Header -->
     <div id="server-url-container">
-      <button id="mobile-menu-button" class="icon-btn" title="Chats"><i class="fas fa-bars"></i></button>
-      <input type="text" id="server-url" placeholder="Enter LM Studio server address" />
-      <select id="model-select" disabled><option value="">Select a model</option></select>
-
-      <!-- NEW center banner -->
+      <div class="header-left">
+        <button id="mobile-menu-button" class="icon-btn" title="Chats"><i class="fas fa-bars"></i></button>
+      </div>
+      <div class="header-center">
+        <input type="text" id="server-url" placeholder="Enter LM Studio server address" />
+        <select id="model-select" disabled><option value="">Select a model</option></select>
+      </div>
+      <div class="header-right">
+        <button id="bg-pick-button" class="icon-btn" title="Set background"><i class="fas fa-image"></i></button>
+        <input type="file" id="bg-upload" accept="image/*" style="display:none;" />
+        <button id="connect-button" title="Connect"><i class="fas fa-plug"></i></button>
+        <button id="export-chats" class="icon-btn" title="Export chats"><i class="fas fa-download"></i></button>
+        <button id="import-chats" class="icon-btn" title="Import chats"><i class="fas fa-upload"></i></button>
+        <button id="clear-chats"  class="icon-btn" title="Clear all chats"><i class="fas fa-trash"></i></button>
+        <input type="file" id="import-file" accept="application/json" style="display:none;" />
+      </div>
       <div id="header-banner" aria-live="polite" title="Built with care">built by Brian Won</div>
-
-      <!-- Background control -->
-      <button id="bg-pick-button" class="icon-btn" title="Set background"><i class="fas fa-image"></i></button>
-      <input type="file" id="bg-upload" accept="image/*" style="display:none;" />
-
-      <!-- Connect -->
-      <button id="connect-button" title="Connect"><i class="fas fa-plug"></i></button>
-
-      <!-- Persistence controls (hidden on mobile) -->
-      <button id="export-chats" class="icon-btn" title="Export chats"><i class="fas fa-download"></i></button>
-      <button id="import-chats" class="icon-btn" title="Import chats"><i class="fas fa-upload"></i></button>
-      <button id="clear-chats"  class="icon-btn" title="Clear all chats"><i class="fas fa-trash"></i></button>
-      <input type="file" id="import-file" accept="application/json" style="display:none;" />
     </div>
     <div id="connection-status">Disconnected</div>
 
@@ -398,7 +593,8 @@
           <button id="upload-button" class="icon-btn" title="Attach image"><i class="fas fa-paperclip"></i></button>
           <input type="file" id="image-upload" accept="image/*" style="display:none;" />
           <div id="image-preview"></div>
-          <input type="text" id="user-input" placeholder="Type a message..." disabled />
+      <input type="text" id="user-input" placeholder="Type a message..." disabled />
+          <div id="autocomplete" role="listbox" aria-label="Suggestions"></div>
           <button id="send-button" class="icon-btn" title="Send" disabled><i class="fas fa-paper-plane"></i></button>
         </div>
       </section>
@@ -543,6 +739,10 @@
       attachCopyButtons(container) { container.querySelectorAll('pre').forEach(Utils.copyButtonForPre); },
       deepClone(obj){ return JSON.parse(JSON.stringify(obj)); },
       baseName(name='') { return String(name).split(/[\\/]/).pop()?.replace(/\.(png|jpe?g|gif|webp|bmp|svg)$/i,'') || ''; },
+      getAssistantName() {
+        const n = (typeof Storage !== 'undefined' && Storage.getBgImageName) ? (Storage.getBgImageName() || '') : '';
+        return n || 'Assistant';
+      },
       approxTokens(s) { return Math.ceil(((s && typeof s === 'string') ? s.length : 0) / 4); },
 
       /* !!! NEW: typing effect */
@@ -556,6 +756,32 @@
           else { el.textContent = fullText; }
         };
         tick();
+      },
+      // URL helpers for deployed hosting (Vercel, etc.)
+      isLocalhostUrl(u){ try { const h = new URL(u).hostname; return h === 'localhost' || h === '127.0.0.1' || h === '::1'; } catch { return false; } },
+      normalizeServerUrl(raw, opts={}){
+        const DEF_PORTS = opts.candidatePorts || [1234, 11434];
+        const s = (raw||'').trim();
+        if (!s) return `http://127.0.0.1:${DEF_PORTS[0]}`;                 // default
+        if (/^\d{2,5}$/.test(s)) return `http://127.0.0.1:${s}`;            // bare port
+        if (!/^https?:\/\//i.test(s)) return `http://${s}`;                // add scheme
+        return s;
+      },
+      canHttpsPageCallUrl(u){
+        const isPageHttps = location.protocol === 'https:';
+        try { const url = new URL(u); return !isPageHttps || url.protocol === 'https:' || this.isLocalhostUrl(u); } catch { return false; }
+      },
+      candidateLocalUrls(raw){
+        const base = this.normalizeServerUrl(raw);
+        const ports = [1234, 11434];
+        const urls = new Set();
+        try {
+          const u = new URL(base);
+          const hostChoices = (u.hostname === 'localhost' || u.hostname === '127.0.0.1') ? ['127.0.0.1','localhost'] : [u.hostname];
+          const portChoices = u.port ? [u.port] : ports.map(String);
+          for (const h of hostChoices) for (const p of portChoices) urls.add(`${u.protocol}//${h}${p?`:${p}`:''}`);
+        } catch { urls.add(base); }
+        return [...urls];
       }
     };
 
@@ -565,6 +791,7 @@
         serverUrl: 'lmstudio.serverUrl',
         recentServers: 'lmstudio.recentServers',
         bgImage: 'lmstudio.bgImage',
+        bgImageName: 'lmstudio.bgImageName',
         bgDim: 'lmstudio.bgDim',
         chats: 'lmstudio.chats',
         currentChatId: 'lmstudio.currentChatId',
@@ -588,6 +815,9 @@
         getBgImage() { return safeGet(K.bgImage, ''); },
         setBgImage(dataUrl) { safeSet(K.bgImage, dataUrl); },
         clearBgImage() { try { localStorage.removeItem(K.bgImage); } catch {} },
+        getBgImageName() { return safeGet(K.bgImageName, ''); },
+        setBgImageName(name) { safeSet(K.bgImageName, String(name || '')); },
+        clearBgImageName() { try { localStorage.removeItem(K.bgImageName); } catch {} },
         getBgDim() { const v = parseFloat(safeGet(K.bgDim, '')); return Number.isFinite(v) ? v : null; },
         setBgDim(v) { safeSet(K.bgDim, String(v)); },
 
@@ -610,6 +840,24 @@
         /* !!! NEW: smart auto-reconnect flag */
         getAutoReconnect() { return safeGet(K.autoReconnect, '0') === '1'; },
         setAutoReconnect(on){ safeSet(K.autoReconnect, on ? '1' : '0'); },
+        // Helper for autocomplete recent prompts
+        getRecentUserPrompts(limit=20){
+          try {
+            const chats = this.loadChats();
+            const flat = [];
+            for (let i = chats.length - 1; i >= 0 && flat.length < limit*2; i--) {
+              const msgs = chats[i].messages || [];
+              for (let j = msgs.length - 1; j >= 0 && flat.length < limit*2; j--) {
+                const m = msgs[j];
+                if (m && m.isUser && typeof m.content === 'string') flat.push(m.content.trim());
+              }
+            }
+            const seen = new Set();
+            const uniq = [];
+            for (const s of flat) { const key = s.toLowerCase(); if (!seen.has(key) && s) { seen.add(key); uniq.push(s); } }
+            return uniq.slice(0, limit);
+          } catch { return []; }
+        },
       };
     })();
 
@@ -738,10 +986,16 @@
       function setFile(file) {
         if (!file || !file.type.startsWith('image/')) return;
         const reader = new FileReader();
-        reader.onload = e => { const dataUrl = e.target.result; Storage.setBgImage(dataUrl); bgLayer.style.backgroundImage = `url('${dataUrl}')`; DEBUG.info('bg.set', { name: file.name, size: file.size }); };
+        reader.onload = e => {
+          const dataUrl = e.target.result;
+          Storage.setBgImage(dataUrl);
+          Storage.setBgImageName(Utils.baseName(file.name || ''));
+          bgLayer.style.backgroundImage = `url('${dataUrl}')`;
+          DEBUG.info('bg.set', { name: file.name, size: file.size });
+        };
         reader.readAsDataURL(file);
       }
-      function clear() { Storage.clearBgImage(); bgLayer.style.backgroundImage = ''; DEBUG.log('bg.clear'); }
+      function clear() { Storage.clearBgImage(); Storage.clearBgImageName(); bgLayer.style.backgroundImage = ''; DEBUG.log('bg.clear'); }
       function setDim(v) { const vv = Utils.clamp(parseFloat(v) || 0, 0, 0.8); Storage.setBgDim(vv); document.documentElement.style.setProperty('--dim-amount', String(vv)); DEBUG.info('bg.dim', { value: vv }); }
       return { applyFromStorage, setFile, clear, setDim };
     })();
@@ -756,7 +1010,7 @@
       async function listModels(serverUrl) {
         DEBUG.perfMark('models:start');
         DEBUG.info('api.listModels', { serverUrl });
-        const res = await fetch(`${serverUrl}/v1/models`);
+        const res = await fetch(`${serverUrl}/v1/models`, { method: 'GET', mode: 'cors', credentials: 'omit', cache: 'no-store', referrerPolicy: 'no-referrer' });
         DEBUG.perfMeasure('models:latency','models:start');
         DEBUG.info('api.listModels.res', { ok: res.ok, status: res.status });
         if (!res.ok) throw new Error('Failed to list models');
@@ -765,7 +1019,7 @@
       async function eject(serverUrl, model) {
         try {
           DEBUG.info('api.eject', { model });
-          await fetch(`${serverUrl}/v1/model/eject`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ model }) });
+          await fetch(`${serverUrl}/v1/model/eject`, { method: 'POST', mode: 'cors', credentials: 'omit', cache: 'no-store', referrerPolicy: 'no-referrer', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ model }) });
         } catch (e) { console.warn('Eject error:', e); DEBUG.warn('api.eject.fail', { error: String(e) }); }
       }
       // UPDATED: include llama.cpp fields like n_keep, and safer defaults
@@ -785,7 +1039,8 @@
           top_p: 0.95
         };
         const res = await fetch(`${serverUrl}/v1/chat/completions`, {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          method: 'POST', mode: 'cors', credentials: 'omit', cache: 'no-store', keepalive: true, referrerPolicy: 'no-referrer',
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(body)
         });
         if (!res.ok || !res.body) { DEBUG.error('api.chat.streamStartFail', { status: res.status }); throw new Error('Streaming failed'); }
@@ -817,7 +1072,7 @@
         const { serverUrl } = State.snapshot;
         if (!serverUrl) return false;
         try {
-          const r = await fetch(`${serverUrl}/v1/models`, { method: 'GET' });
+          const r = await fetch(`${serverUrl}/v1/models`, { method: 'GET', mode: 'cors', credentials: 'omit', cache: 'no-store', referrerPolicy: 'no-referrer' });
           return r.ok;
         } catch {
           return false;
@@ -873,6 +1128,11 @@
       async function tryConnect(serverUrl){
         DEBUG.log('ui.connect.try', { serverUrl });
         if (!serverUrl) { setStatus('Please enter a valid server address', false); return false; }
+        if (!Utils.canHttpsPageCallUrl(serverUrl)) {
+          setStatus('Blocked: use https or localhost target', false);
+          alert('Your page is https. Browsers block http requests to non-local targets. Use a localhost URL (e.g., http://127.0.0.1:1234) or host your API with https/CORS.');
+          return false;
+        }
         try {
           setStatus('Connecting...', false);
           const data = await LMStudioAPI.listModels(serverUrl);
@@ -891,6 +1151,19 @@
           DEBUG.error('ui.connect.fail', { message: String(e) });
           return false;
         }
+      }
+
+      /* NEW: smart connect that tries localhost candidates and normalizes */
+      async function smartConnect(inputUrl){
+        const candidates = Utils.candidateLocalUrls(inputUrl);
+        for (const u of candidates) {
+          if (!Utils.canHttpsPageCallUrl(u)) continue;
+          const ok = await tryConnect(u);
+          if (ok) { els.serverUrl.value = u; return true; }
+        }
+        setStatus('Failed to connect (server offline or CORS)', false);
+        alert('Could not connect. If LM Studio is running locally, ensure it allows CORS or try http://127.0.0.1:1234.');
+        return false;
       }
 
       /* !!! NEW: Smart Reconnect (exponential backoff) */
@@ -958,9 +1231,9 @@
             Events.emit('network:disconnected', { manual: true });
             return;
           }
-          const serverUrl = els.serverUrl.value.trim();
+          const serverUrl = Utils.normalizeServerUrl(els.serverUrl.value.trim());
           lastDisconnectManual = false;
-          await tryConnect(serverUrl);
+          await smartConnect(serverUrl);
         });
 
         // Model switching
@@ -1028,9 +1301,9 @@
         });
 
         // On-load gentle auto-connect (only if user connected before & URL present)
-        const savedUrl = (State.snapshot.serverUrl || Storage.getServerUrl() || '').trim();
+        const savedUrl = Utils.normalizeServerUrl((State.snapshot.serverUrl || Storage.getServerUrl() || '').trim());
         if (Storage.getAutoReconnect() && savedUrl) {
-          tryConnect(savedUrl).then(ok => { if (!ok) Reconnect.schedule('onload'); });
+          smartConnect(savedUrl).then(ok => { if (!ok) Reconnect.schedule('onload'); });
         }
       }
 
@@ -1146,7 +1419,7 @@
 
         const header = document.createElement('div');
         header.className = 'message-header';
-        header.textContent = isUser ? 'You' : (msg.headerLabel || 'Assistant');
+        header.textContent = isUser ? 'You' : (msg.headerLabel || Utils.getAssistantName());
         wrapper.appendChild(header);
 
         if (!isUser && model) {
@@ -1188,7 +1461,7 @@
         const shell = document.createElement('div');
         shell.className = 'message assistant-message';
         shell.innerHTML = `
-          <div class="message-header">${headerLabel || 'Assistant'}</div>
+          <div class="message-header">${headerLabel || Utils.getAssistantName()}</div>
           <div class="message-model">${State.snapshot.currentModel || ''}</div>
           <div class="message-metrics">${new Date().toLocaleString()}</div>
           <div class="message-content"><span class="loading-dots">Loading</span></div>
@@ -1256,7 +1529,8 @@
         file: document.getElementById('image-upload'),
         preview: document.getElementById('image-preview'),
         input: document.getElementById('user-input'),
-        send: document.getElementById('send-button')
+        send: document.getElementById('send-button'),
+        ac: document.getElementById('autocomplete')
       };
 
       function setEnabled(yes) { els.input.disabled = !yes; els.send.disabled = !yes; }
@@ -1352,7 +1626,154 @@
 
       function focus() { els.input.focus(); }
 
-      return { bind, getMessageAndMaybeImage, focus };
+      // ================= Autocomplete + Commands =================
+      const COMMANDS = [
+        { k: '/help', d: 'Show available commands' },
+        { k: '/clear', d: 'Clear current chat messages' },
+        { k: '/clearall', d: 'Delete all chats (confirm)' },
+        { k: '/rename', d: 'Rename current chat: /rename New Name' },
+        { k: '/title', d: 'Alias of /rename' },
+        { k: '/bg pick', d: 'Pick a background image' },
+        { k: '/bg clear', d: 'Clear background image' },
+        { k: '/dim', d: 'Set background dim 0–0.8: /dim 0.25' },
+        { k: '/export', d: 'Export chats to a file' },
+        { k: '/import', d: 'Import chats from a file' },
+        { k: '/model', d: 'Switch model by name: /model llama' },
+        { k: '/connect', d: 'Connect to server' },
+        { k: '/disconnect', d: 'Disconnect' },
+        { k: '/eject', d: 'Unload current model' },
+      ];
+
+      let acItems = [];
+      let acIndex = -1;
+
+      function hideAC(){ els.ac.style.display = 'none'; els.ac.innerHTML=''; acItems=[]; acIndex=-1; }
+      function showAC(items){
+        if (!items || !items.length) { hideAC(); return; }
+        els.ac.innerHTML = items.map((it,i)=>`<div class="ac-item${i===0?' active':''}" data-i="${i}"><span class="ac-k">${it.k}</span><span class="ac-d">${it.d}</span></div>`).join('');
+        els.ac.style.display = 'block';
+        acItems = items; acIndex = 0;
+      }
+      function moveAC(delta){ if (!acItems.length) return; acIndex = (acIndex + delta + acItems.length) % acItems.length; [...els.ac.children].forEach((c,i)=>c.classList.toggle('active', i===acIndex)); }
+      function acceptAC(){ if (!acItems.length) return false; const it = acItems[acIndex]; if (!it) return false; els.input.value = it.k + (it.k.endsWith(' ')?'':' ') ; hideAC(); return true; }
+
+      function computeAC(text){
+        const t = text.trimStart();
+        if (t.startsWith('/')){
+          const q = t.toLowerCase();
+          const list = COMMANDS.filter(c => c.k.startsWith(q)).slice(0, 10);
+          showAC(list);
+          return;
+        }
+        // Suggest from recent user prompts
+        const parts = text.split(/\s+/); const last = parts.pop() || '';
+        if (!last) { hideAC(); return; }
+        const recents = Storage.getRecentUserPrompts(20);
+        const list = recents.filter(s => s.toLowerCase().startsWith(last.toLowerCase())).slice(0,8)
+          .map(s => ({ k: parts.concat([s]).join(' '), d: 'Recent' }));
+        if (list.length) showAC(list); else hideAC();
+      }
+
+      function tryHandleCommand(){
+        const raw = els.input.value.trim();
+        if (!raw.startsWith('/')) return false;
+        const args = raw.split(/\s+/);
+        const cmd = (args.shift()||'').toLowerCase();
+        const rest = args.join(' ');
+        const say = (text, label='System') => State.addMessage({ content: text, isUser: false, chatId: State.snapshot.currentChatId, headerLabel: label });
+        const click = (sel) => document.querySelector(sel)?.click();
+        switch(cmd){
+          case '/help':
+            say(`<strong>Commands</strong><br>` + COMMANDS.map(c=>`${c.k} — ${c.d}`).join('<br>'));
+            break;
+          case '/clear': {
+            const chat = State.snapshot.currentChat; if (chat) { chat.messages = []; State.selectChat(chat.id); say('Cleared current chat.'); }
+            break; }
+          case '/clearall':
+            if (confirm('Delete all chats?')) { State.clearAllChats(); say('All chats cleared.'); }
+            break;
+          case '/rename':
+          case '/title': {
+            const name = rest.trim(); if (!name) { say('Usage: /rename New Name'); break; }
+            const chat = State.snapshot.currentChat; if (chat) { chat.name = name; State.selectChat(chat.id); say(`Renamed chat to: ${name}`); }
+            break; }
+          case '/bg': {
+            const sub = (args.shift()||'').toLowerCase();
+            if (sub === 'pick') { click('#bg-upload'); say('Pick an image...'); }
+            else if (sub === 'clear') { BackgroundService.clear(); say('Background cleared.'); }
+            else say('Usage: /bg pick | /bg clear');
+            break; }
+          case '/dim': {
+            const v = parseFloat(args[0]); if (isNaN(v)) { say('Usage: /dim 0.25'); break; }
+            BackgroundService.setDim(v); say(`Dim set to ${Utils.clamp(v,0,0.8)}`);
+            break; }
+          case '/export': {
+            const blob = new Blob([Storage.exportChats()], { type: 'application/json' });
+            const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'chats.json'; a.click(); URL.revokeObjectURL(a.href);
+            say('Exported chats.');
+            break; }
+          case '/import': click('#import-file'); say('Import a chats JSON file...'); break;
+          case '/model': {
+            const q = rest.toLowerCase(); if (!q) { say('Usage: /model partial-name'); break; }
+            const sel = document.getElementById('model-select');
+            let picked = '';
+            for (const opt of sel.options) { if (opt.value && opt.text.toLowerCase().includes(q)) { picked = opt.value; break; } }
+            if (picked) { sel.value = picked; State.setModel(picked); say(`Model switched to: ${picked}`,'Model'); }
+            else say('No model matched.');
+            break; }
+          case '/connect': click('#connect-button'); break;
+          case '/disconnect': click('#connect-button'); break;
+          case '/eject': {
+            const { serverUrl, currentModel } = State.snapshot; if (serverUrl && currentModel) {
+              LMStudioAPI.eject(serverUrl, currentModel).then(()=>say('Ejected model.','Model'));
+            } else say('No server/model.');
+            break; }
+          default:
+            say('Unknown command. Type /help');
+        }
+        els.input.value = '';
+        hideAC();
+        return true;
+      }
+
+      function bindAutocomplete(){
+        els.input.addEventListener('input', () => computeAC(els.input.value));
+        els.input.addEventListener('keydown', (e) => {
+          if (e.key === 'Tab' && acItems.length) { e.preventDefault(); if (acceptAC()) computeAC(els.input.value); return; }
+          if (e.key === 'ArrowDown' && acItems.length) { e.preventDefault(); moveAC(+1); return; }
+          if (e.key === 'ArrowUp' && acItems.length) { e.preventDefault(); moveAC(-1); return; }
+          if (e.key === 'Enter' && els.input.value.trim().startsWith('/')) {
+            // Execute command; prevent normal send path
+            if (tryHandleCommand()) { e.preventDefault(); return; }
+          }
+        });
+        els.ac.addEventListener('click', (e) => {
+          const el = e.target.closest('.ac-item'); if (!el) return; acIndex = Number(el.dataset.i||'0'); acceptAC(); els.input.focus(); computeAC(els.input.value);
+        });
+        document.addEventListener('click', (e)=>{ if (!e.target.closest('#autocomplete') && e.target !== els.input) hideAC(); });
+      }
+
+      function bind() {
+        // Buttons & file input
+        els.uploadBtn.addEventListener('click', () => els.file.click());
+        els.file.addEventListener('change', () => { const f = els.file.files?.[0]; if (f) handleImageFile(f); els.file.value = ''; });
+        // Drag-n-drop handlers...
+        ['dragenter','dragover','dragleave','drop'].forEach(evt => {
+          els.dropZone.addEventListener(evt, e => { e.preventDefault(); e.stopPropagation(); });
+        });
+        els.dropZone.addEventListener('dragenter', () => els.dropZone.classList.add('drop-hover'));
+        els.dropZone.addEventListener('dragover',  () => els.dropZone.classList.add('drop-hover'));
+        els.dropZone.addEventListener('dragleave', () => els.dropZone.classList.remove('drop-hover'));
+        els.dropZone.addEventListener('drop', async (e) => { els.dropZone.classList.remove('drop-hover'); const dt = e.dataTransfer; await handleTransferItems(dt); DEBUG.info('ui.input.drop.image'); });
+
+        // Enable/disable with connection
+        Events.on('ui:connectionControls', ({ enabled }) => setEnabled(enabled));
+        setEnabled(false);
+
+        bindAutocomplete();
+      }
+
+      return { bind, getMessageAndMaybeImage, focus, tryHandleCommand };
     })();
 
     // ================= App Controller =================
@@ -1360,6 +1781,8 @@
       async function onSend() {
         const { serverUrl, currentModel, isConnected } = State.snapshot;
         DEBUG.log('onSend.begin', { isConnected, hasModel: !!currentModel });
+        // Slash command handling (pre-send)
+        if (InputBar.tryHandleCommand()) { return; }
         if (!isConnected) { Header.setStatus('Disconnected', false); alert('Connect to the LM Studio server first.'); return; }
         if (!serverUrl) { alert('Missing server URL.'); return; }
         if (!currentModel) { alert('Pick a model before sending.'); return; }
@@ -1368,7 +1791,8 @@
         if (!req) return;
 
         const targetChatId = req.chatId;
-        const headerLabel = req.headerLabel;
+        let headerLabel = req.headerLabel;
+        if (!headerLabel) headerLabel = Utils.getAssistantName();
 
         let stream = null;
         if (State.snapshot.currentChatId === targetChatId) {
@@ -1410,6 +1834,17 @@
         const input = document.getElementById('user-input');
         sendBtn.addEventListener('click', onSend);
         input.addEventListener('keypress', (e) => { if (e.key === 'Enter') onSend(); });
+
+        // Global press FX for buttons (neon pulse + ripple)
+        document.addEventListener('click', (e) => {
+          const btn = e.target.closest('.icon-btn, #connect-button, #new-chat-button');
+          if (!btn) return;
+          btn.classList.remove('is-pressed');
+          // reflow to restart animation
+          void btn.offsetWidth;
+          btn.classList.add('is-pressed');
+          setTimeout(() => btn.classList.remove('is-pressed'), 520);
+        }, { passive: true });
       }
 
       return { init };
